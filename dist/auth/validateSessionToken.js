@@ -30,7 +30,7 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
  * ```
  */
 async function validateSessionToken(token, options) {
-    const { shopifySecret, mockSecret = "real-id-dev-secret-12345", developmentOnly = true } = options;
+    const { shopifySecret, mockSecret = "mock-secret-12345", developmentOnly = true } = options;
     // Determine which secrets to try based on environment and options
     const secretsToTry = [];
     // In development, try mock secret first if enabled

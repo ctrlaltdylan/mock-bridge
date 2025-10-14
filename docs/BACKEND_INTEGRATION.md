@@ -407,7 +407,7 @@ Universal session token validator.
 
 **Options:**
 - `shopifySecret: string` - Real Shopify client secret (required)
-- `mockSecret?: string` - Mock client secret (default: "real-id-dev-secret-12345")
+- `mockSecret?: string` - Mock client secret (default: "mock-secret-12345")
 - `developmentOnly?: boolean` - Only try mock tokens in development (default: true)
 
 **Returns:** `AuthResult | false`
@@ -430,7 +430,7 @@ Quick check if a token is a mock token.
 
 **Parameters:**
 - `token: string` - JWT session token to check
-- `mockSecret?: string` - Mock secret (default: "real-id-dev-secret-12345")
+- `mockSecret?: string` - Mock secret (default: "mock-secret-12345")
 
 **Returns:** `boolean`
 

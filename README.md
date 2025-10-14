@@ -2,7 +2,7 @@
 
 A comprehensive browser testing solution for Shopify embedded apps. Mock the Shopify Admin environment and App Bridge APIs locally without needing real Shopify credentials, captchas, or 2FA.
 
-[![npm version](https://badge.fury.io/js/@verdict/shopify-mock-bridge.svg)](https://www.npmjs.com/package/@verdict/shopify-mock-bridge)
+[![npm version](https://badge.fury.io/js/@getverdict/mock-bridge.svg)](https://www.npmjs.com/package/@getverdict/mock-bridge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 🎯 Why Use This Package?
@@ -178,7 +178,7 @@ Replace your App Bridge script loading:
 
 ```typescript
 // app.tsx or _app.tsx
-import { setupAppBridge } from "@verdict/shopify-mock-bridge/client";
+import { setupAppBridge } from "@getverdict/mock-bridge/client";
 
 useEffect(() => {
   setupAppBridge({
@@ -218,7 +218,7 @@ export async function authenticate(token: string) {
 import {
   validateSessionToken,
   createMockUser,
-} from "@verdict/shopify-mock-bridge/auth";
+} from "@getverdict/mock-bridge/auth";
 
 export async function authenticate(token: string) {
   const authData = await validateSessionToken(token, {
@@ -263,7 +263,7 @@ export async function authenticate(token: string) {
 
 ```typescript
 // pages/api/products.ts
-import { validateSessionToken } from "@verdict/shopify-mock-bridge/auth";
+import { validateSessionToken } from "@getverdict/mock-bridge/auth";
 
 export default async function handler(req, res) {
   const token = req.headers.authorization?.replace("Bearer ", "");
@@ -298,7 +298,7 @@ export default async function handler(req, res) {
 import {
   validateSessionToken,
   createMockUser,
-} from "@verdict/shopify-mock-bridge/auth";
+} from "@getverdict/mock-bridge/auth";
 
 function createAuthMiddleware() {
   return async (req, res, next) => {
@@ -550,7 +550,7 @@ const mockUser = createMockUser({
 ```typescript
 // playwright.config.ts
 import { defineConfig } from "@playwright/test";
-import { MockShopifyAdminServer } from "@verdict/shopify-mock-bridge";
+import { MockShopifyAdminServer } from "@getverdict/mock-bridge";
 
 let mockServer: MockShopifyAdminServer;
 
@@ -614,7 +614,7 @@ test("should handle authentication", async ({ page }) => {
 
 ```typescript
 // tests/api.test.ts
-import { MockShopifyAdminServer } from "@verdict/shopify-mock-bridge";
+import { MockShopifyAdminServer } from "@getverdict/mock-bridge";
 import {
   createMockUser,
   validateSessionToken,
@@ -780,7 +780,7 @@ Universal validator for both real and mock tokens.
 
 - `token: string` - JWT session token
 - `options.shopifySecret: string` - Real Shopify client secret
-- `options.mockSecret?: string` - Mock secret (default: "real-id-dev-secret-12345")
+- `options.mockSecret?: string` - Mock secret (default: "mock-secret-12345")
 - `options.developmentOnly?: boolean` - Only try mock tokens in development (default: true)
 
 **Returns:** `AuthResult | false`

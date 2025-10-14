@@ -55,7 +55,7 @@ export async function validateSessionToken(
 ): Promise<AuthResult | false> {
   const {
     shopifySecret,
-    mockSecret = "real-id-dev-secret-12345",
+    mockSecret = "mock-secret-12345",
     developmentOnly = true
   } = options;
 

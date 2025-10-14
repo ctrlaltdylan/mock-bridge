@@ -146,7 +146,7 @@ class MockShopifyAdminServer {
         const appUrl = new URL(this.config.appUrl);
         const basePath = this.config.appPath || '';
         const iframeSrc = `${this.config.appUrl}${basePath}?host=${host}&shop=${shop}&embedded=1`;
-        // Extract shop name for Shopify admin URLs (e.g., "real-id-dev" from "real-id-dev.myshopify.com")
+        // Extract shop name for Shopify admin URLs (e.g., "test-shop" from "test-shop.myshopify.com")
         const shopName = shop.replace('.myshopify.com', '');
         return `
 <!DOCTYPE html>
