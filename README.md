@@ -9,6 +9,16 @@
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 </div>
 
+## 🎥 See It In Action
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=swflaGObK4A" target="_blank">
+    <img src="assets/img/yt-thumbnail.png" alt="Mock Bridge Demo Video" width="600" />
+  </a>
+  
+  **[▶️ Watch the Demo Video](https://www.youtube.com/watch?v=swflaGObK4A)** - See how Mock Bridge simplifies Shopify app testing
+</div>
+
 ## 🎯 Why Use This Package?
 
 **Testing Shopify embedded apps is hard:**
