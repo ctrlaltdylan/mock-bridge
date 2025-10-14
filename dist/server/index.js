@@ -61,6 +61,13 @@ class MockShopifyAdminServer {
         }
     }
     setupRoutes() {
+        // Serve logo images
+        this.app.get('/logo', (req, res) => {
+            res.sendFile(path_1.default.join(__dirname, '../../assets/img/mock-bridge-logo-200px.jpg'));
+        });
+        this.app.get('/favicon.ico', (req, res) => {
+            res.sendFile(path_1.default.join(__dirname, '../../assets/img/mock-bridge-logo-200px.jpg'));
+        });
         // Main admin route - serves the mock Shopify Admin page
         this.app.get('/', (req, res) => {
             const hostBase64 = Buffer.from(`https://${this.config.shop}`).toString('base64');
@@ -158,6 +165,7 @@ class MockShopifyAdminServer {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mock Shopify Admin - ${this.mockShop.name}</title>
+  <link rel="icon" type="image/jpeg" href="/favicon.ico">
   
   <style>
     * {
@@ -198,13 +206,31 @@ class MockShopifyAdminServer {
     .nav-title a {
       color: #202223;
       text-decoration: none;
-      font-size: 16px;
-      font-weight: 600;
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
     
-    .nav-title a:hover {
+    .nav-title a:hover .nav-text {
       color: #005bd3;
+    }
+    
+    .nav-title .logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    
+    .nav-title .nav-text {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .nav-title .title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #202223;
     }
     
     .nav-title .subtitle {
@@ -337,8 +363,11 @@ class MockShopifyAdminServer {
       <nav class="admin-nav">
         <div class="nav-title">
           <a href="https://github.com/ctrlaltdylan/mock-bridge" target="_blank">
-            Mock Bridge
-            <div class="subtitle">Shopify Admin Mock</div>
+            <img src="/logo" alt="Mock Bridge Logo" class="logo" />
+            <div class="nav-text">
+              <div class="title">Mock Bridge</div>
+              <div class="subtitle">Shopify Admin Mock</div>
+            </div>
           </a>
         </div>
         <div class="nav-section">

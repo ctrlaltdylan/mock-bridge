@@ -1,9 +1,13 @@
-# Shopify Mock Bridge
-
-A comprehensive browser testing solution for Shopify embedded apps. Mock the Shopify Admin environment and App Bridge APIs locally without needing real Shopify credentials, captchas, or 2FA.
-
-[![npm version](https://badge.fury.io/js/@getverdict/mock-bridge.svg)](https://www.npmjs.com/package/@getverdict/mock-bridge)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<div align="center">
+  <img src="assets/img/mock-bridge-logo.png" alt="Mock Bridge Logo" width="200" />
+  
+  # Shopify Mock Bridge
+  
+  A comprehensive browser testing solution for Shopify embedded apps. Mock the Shopify Admin environment and App Bridge APIs locally without needing real Shopify credentials, captchas, or 2FA.
+  
+  [![npm version](https://badge.fury.io/js/@getverdict%2Fmock-bridge.svg)](https://www.npmjs.com/package/@getverdict/mock-bridge)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+</div>
 
 ## 🎯 Why Use This Package?
 
