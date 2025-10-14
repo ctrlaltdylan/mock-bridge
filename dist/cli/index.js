@@ -92,12 +92,8 @@ function validateConfig(config) {
     if (!config.appUrl) {
         errors.push('App URL is required (provide as argument or set in config file)');
     }
-    if (!config.clientId) {
-        errors.push('Client ID is required (use --client-id or set SHOPIFY_API_KEY)');
-    }
-    if (!config.clientSecret) {
-        errors.push('Client secret is required (use --client-secret or set in config file)');
-    }
+    // clientId and clientSecret are now optional with defaults
+    // No validation needed as defaults are provided
     if (errors.length > 0) {
         console.error(chalk_1.default.red('❌ Configuration errors:'));
         errors.forEach(error => console.error(chalk_1.default.red(`   • ${error}`)));
@@ -144,6 +140,7 @@ async function startCommand(options) {
             // Default values
             port: 3080,
             shop: 'test-shop.myshopify.com',
+            clientId: constants_1.STANDARD_MOCK_CLIENT_ID,
             clientSecret: constants_1.STANDARD_MOCK_SECRET,
             apiVersion: '2024-01',
             scopes: [
@@ -167,6 +164,13 @@ async function startCommand(options) {
         };
         // Validate configuration
         validateConfig(finalConfig);
+        // Show warning if using default client ID
+        if (finalConfig.clientId === constants_1.STANDARD_MOCK_CLIENT_ID) {
+            console.log(chalk_1.default.yellow('⚠️  Using default client ID for development.'));
+            console.log(chalk_1.default.gray('   For production-like testing, provide your real client ID:'));
+            console.log(chalk_1.default.gray('   npx @getverdict/mock-bridge http://localhost:3000 --client-id your-real-id'));
+            console.log();
+        }
         // Print configuration summary
         printConfigSummary(finalConfig);
         // Create and start the mock server
@@ -232,7 +236,7 @@ module.exports = {
   appUrl: 'http://localhost:3000/shopify', // Your app's URL (include path if needed)
   
   // Shopify app credentials
-  clientId: process.env.SHOPIFY_API_KEY,  // Your Shopify app's client ID
+  clientId: process.env.SHOPIFY_API_KEY || '${constants_1.STANDARD_MOCK_CLIENT_ID}',  // Your Shopify app's client ID (optional)
   clientSecret: '${constants_1.STANDARD_MOCK_SECRET}', // Standard mock secret for development only
   
   // Mock environment settings
@@ -286,7 +290,7 @@ program
 // Default start command - simplified interface
 program
     .argument('[app-url]', 'Your app\'s URL (e.g., http://localhost:3000/shopify)')
-    .option('-i, --client-id <id>', 'Your Shopify app\'s client ID')
+    .option('-i, --client-id <id>', 'Your Shopify app\'s client ID (optional, defaults to development ID)')
     .option('-s, --client-secret <secret>', 'Mock client secret (development only)')
     .option('--shop <domain>', 'Mock shop domain', 'test-shop.myshopify.com')
     .option('--port <number>', 'Mock admin port', (val) => parseInt(val, 10), 3080)
@@ -304,7 +308,7 @@ program
     .command('start')
     .description('Start the mock Shopify Admin server')
     .argument('[app-url]', 'Your app\'s URL (e.g., http://localhost:3000/shopify)')
-    .option('-i, --client-id <id>', 'Your Shopify app\'s client ID')
+    .option('-i, --client-id <id>', 'Your Shopify app\'s client ID (optional, defaults to development ID)')
     .option('-s, --client-secret <secret>', 'Mock client secret (development only)')
     .option('--shop <domain>', 'Mock shop domain', 'test-shop.myshopify.com')
     .option('--port <number>', 'Mock admin port', (val) => parseInt(val, 10), 3080)

@@ -9,11 +9,14 @@ const cors_1 = __importDefault(require("cors"));
 const body_parser_1 = __importDefault(require("body-parser"));
 const path_1 = __importDefault(require("path"));
 const token_generator_1 = require("../auth/token-generator");
+const constants_1 = require("../auth/constants");
 class MockShopifyAdminServer {
     constructor(config) {
         this.config = {
             port: 3080,
             shop: 'test-shop.myshopify.com',
+            clientId: constants_1.STANDARD_MOCK_CLIENT_ID,
+            clientSecret: constants_1.STANDARD_MOCK_SECRET,
             apiVersion: '2024-01',
             scopes: ['read_products', 'write_products', 'read_orders', 'write_orders'],
             debug: false,

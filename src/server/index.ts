@@ -6,6 +6,7 @@ import https from 'https';
 import fs from 'fs';
 import { TokenGenerator } from '../auth/token-generator';
 import { MockShopifyAdminConfig, MockShop, MockUser } from '../types';
+import { STANDARD_MOCK_CLIENT_ID, STANDARD_MOCK_SECRET } from '../auth/constants';
 
 export class MockShopifyAdminServer {
   private app: Express;
@@ -19,6 +20,8 @@ export class MockShopifyAdminServer {
     this.config = {
       port: 3080,
       shop: 'test-shop.myshopify.com',
+      clientId: STANDARD_MOCK_CLIENT_ID,
+      clientSecret: STANDARD_MOCK_SECRET,
       apiVersion: '2024-01',
       scopes: ['read_products', 'write_products', 'read_orders', 'write_orders'],
       debug: false,
@@ -26,7 +29,7 @@ export class MockShopifyAdminServer {
     };
     
     this.app = express();
-    this.tokenGenerator = new TokenGenerator(this.config.clientSecret);
+    this.tokenGenerator = new TokenGenerator(this.config.clientSecret!);
     
     // Initialize mock data
     this.mockShop = {
@@ -96,8 +99,8 @@ export class MockShopifyAdminServer {
     this.app.post('/api/session-token', (req: Request, res: Response) => {
       const token = this.tokenGenerator.generateSessionToken({
         shop: this.config.shop!,
-        clientId: this.config.clientId,
-        clientSecret: this.config.clientSecret,
+        clientId: this.config.clientId!,
+        clientSecret: this.config.clientSecret!,
         userId: this.mockUser.id,
       });
       
@@ -130,7 +133,7 @@ export class MockShopifyAdminServer {
     this.app.post('/admin/oauth/access_token', (req: Request, res: Response) => {
       const { client_id, client_secret, subject_token } = req.body;
       
-      if (client_id !== this.config.clientId || client_secret !== this.config.clientSecret) {
+      if (client_id !== this.config.clientId! || client_secret !== this.config.clientSecret!) {
         return res.status(401).json({ error: 'invalid_client' });
       }
       
