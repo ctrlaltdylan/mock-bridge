@@ -54,7 +54,7 @@ pnpm add @getverdict/mock-bridge --save-dev
 npm install @getverdict/mock-bridge --save-dev
 
 # 2. Start the mock (just provide your app URL)
-npx mock-bridge http://localhost:3000
+npx @getverdict/mock-bridge http://localhost:3000
 ```
 
 **That's it!** Your app is now running in a mock Shopify Admin at http://localhost:3080
@@ -67,7 +67,7 @@ npx mock-bridge http://localhost:3000
 
 ```bash
 # Simplest - just provide your app URL
-npx mock-bridge http://localhost:3000
+npx @getverdict/mock-bridge http://localhost:3000
 
 # Auto-detects client ID from SHOPIFY_API_KEY environment variable
 # Auto-detects common app paths and configurations
@@ -77,10 +77,10 @@ npx mock-bridge http://localhost:3000
 
 ```bash
 # Generate a config file
-npx mock-bridge init
+npx @getverdict/mock-bridge init
 
 # Edit the generated mock.config.js, then run:
-npx mock-bridge
+npx @getverdict/mock-bridge
 ```
 
 ```bash
@@ -367,7 +367,7 @@ if (process.env.NODE_ENV === "development") {
 
 ```bash
 # Option 1: CLI command (simplest)
-npx mock-bridge http://localhost:3000
+npx @getverdict/mock-bridge http://localhost:3000
 
 # Option 2: Package.json scripts
 npm run dev:mock
@@ -389,21 +389,25 @@ npm run mock:admin            # Terminal 2: Mock admin
 
 ```bash
 # Basic usage with auto-detection
-npx mock-bridge http://localhost:3000
+npx @getverdict/mock-bridge http://localhost:3000
+
+# If installed locally, you can use the shorter command:
+# npm install @getverdict/mock-bridge --save-dev
+# npx mock-bridge http://localhost:3000
 
 # Full configuration
-npx mock-bridge http://localhost:3000/shopify \
+npx @getverdict/mock-bridge http://localhost:3000/shopify \
   --client-id your-client-id \
   --port 3080 \
   --debug
 
 # Using config file
-npx mock-bridge init           # Create config file
-npx mock-bridge                # Use config file
+npx @getverdict/mock-bridge init           # Create config file
+npx @getverdict/mock-bridge                # Use config file
 
 # Help and version
-npx mock-bridge --help
-npx mock-bridge --version
+npx @getverdict/mock-bridge --help
+npx @getverdict/mock-bridge --version
 ```
 
 ### CLI Options
@@ -429,7 +433,7 @@ NODE_ENV=development                # Enables mock token support
 
 ### Configuration File
 
-Generate a configuration file with `npx mock-bridge init`:
+Generate a configuration file with `npx @getverdict/mock-bridge init`:
 
 ```javascript
 // mock.config.js
