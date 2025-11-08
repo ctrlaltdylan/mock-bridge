@@ -8,8 +8,12 @@
     "mock-bridge": "dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc && cd admin-frame && npm run build",
-    "dev": "ts-node -r dotenv/config src/server/dev.ts",
+    "build": "tsc && npm run build:admin-frame && npm run build:app-bridge",
+    "build:admin-frame": "cd admin-frame && npm run build",
+    "build:app-bridge": "cd app-bridge && npm run build",
+    "dev": "concurrently \"ts-node -r dotenv/config src/server/dev.ts\" \"npm run dev:app-bridge\" \"npm run dev:admin-frame\"",
+    "dev:app-bridge": "cd app-bridge && npm run watch",
+    "dev:admin-frame": "cd admin-frame && npm run dev",
     "start": "node dist/server/index.js",
     "watch": "tsc --watch",
     "clean": "rm -rf dist"
@@ -38,6 +42,7 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.5",
     "@types/uuid": "^9.0.7",
+    "concurrently": "^9.2.1",
     "dotenv": "^17.2.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
