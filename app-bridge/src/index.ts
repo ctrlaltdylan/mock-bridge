@@ -3,6 +3,23 @@
  * This mimics the real @shopify/app-bridge library for testing purposes
  */
 
+import { modal } from "./features/modal";
+import { saveBar } from "./features/save-bar";
+import { scopes } from "./features/scopes";
+import { config } from "./features/config";
+import { environment } from "./features/environment";
+import { user } from "./features/user";
+import { toast } from "./features/toast";
+import { resourcePicker } from "./features/resource-picker";
+import { scanner } from "./features/scanner";
+import { pos } from "./features/pos";
+import { intents } from "./features/intents";
+import { webVitals } from "./features/web-vitals";
+import { support } from "./features/support";
+import { reviews } from "./features/reviews";
+import { picker } from "./features/picker";
+import { app } from "./features/app";
+
 (function (window) {
   'use strict';
 
@@ -322,22 +339,30 @@
   };
 
   // Create the 'shopify' global that @shopify/app-bridge-react expects
-  (window as any).shopify = {
-    // TODO: Ready and loading need full implementation
-    ready: Promise.resolve(true),
+  window.shopify = {
+    modal: modal(),
+    saveBar: saveBar(),
+    scopes: scopes(),
+    config: config(),
+    environment: environment(),
+    user: user(),
+    toast: toast(),
+    resourcePicker: resourcePicker(),
+    scanner: scanner(),
+    pos: pos(),
+    intents: intents(),
+    webVitals: webVitals(),
+    support: support(),
+    reviews: reviews(),
+    picker: picker(),
+    app: app(),
+
+    // Lifecycle methods
+    ready: Promise.resolve(),
     loading: () => void 0,
 
-    // TODO: SaveBar needs full implementation
-    saveBar: {
-      leaveConfirmation: () => Promise.resolve(true),
-      hide: () => void 0,
-      show: () => void 0,
-    },
-
-    createApp: createApp,
-    actions: Actions,
-    utilities: utilities,
-    platform: platform,
+    // Origin should be empty string for mock
+    origin: '',
 
     // Add idToken method directly to shopify global for useAppBridge() compatibility
     idToken: async function () {
