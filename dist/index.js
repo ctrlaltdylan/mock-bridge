@@ -53,6 +53,7 @@ __exportStar(require("./auth"), exports);
 async function startMockShopifyAdmin(config) {
     const { MockShopifyAdminServer } = await Promise.resolve().then(() => __importStar(require('./server')));
     const server = new MockShopifyAdminServer(config);
+    console.log('Starting mock server with config:', config);
     await server.start();
     return server;
 }

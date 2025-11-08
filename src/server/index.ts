@@ -2,8 +2,6 @@ import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import path from 'path';
-import https from 'https';
-import fs from 'fs';
 import { TokenGenerator } from '../auth/token-generator';
 import { MockShopifyAdminConfig, MockShop, MockUser } from '../types';
 import { STANDARD_MOCK_CLIENT_ID, STANDARD_MOCK_SECRET } from '../auth/constants';
@@ -27,10 +25,10 @@ export class MockShopifyAdminServer {
       debug: false,
       ...config,
     };
-    
+
     this.app = express();
     this.tokenGenerator = new TokenGenerator(this.config.clientSecret!);
-    
+
     // Initialize mock data
     this.mockShop = {
       domain: this.config.shop!,
@@ -39,15 +37,15 @@ export class MockShopifyAdminServer {
       plan: 'developer',
       createdAt: new Date().toISOString(),
     };
-    
+
     this.mockUser = {
-      id: '123456789',
+      id: this.config.userId || '123456789',
       email: 'test@mockshop.com',
       firstName: 'Test',
       lastName: 'User',
       displayName: 'Test User',
     };
-    
+
     this.setupMiddleware();
     this.setupRoutes();
   }
@@ -58,13 +56,31 @@ export class MockShopifyAdminServer {
       origin: true,
       credentials: true,
     }));
-    
+
     this.app.use(bodyParser.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
-    
+
     // Serve static files from client directory
     this.app.use('/static', express.static(path.join(__dirname, '../client')));
-    
+    this.app.use(express.static(path.join(__dirname, '../../admin-frame/dist')));
+
+    // Mock Shopify Admin page with embedded app
+    this.app.use('/admin/apps/:clientId', (req: Request, res: Response, next) => {
+      // const { host, shop } = req.query;
+
+      // Set CSP header to allow iframe embedding
+      res.setHeader('Content-Security-Policy',
+        `frame-src 'self' ${this.config.appUrl}; ` +
+        `frame-ancestors 'self' localhost:*; ` +
+        `script-src 'self' 'unsafe-inline' 'unsafe-eval';`
+      );
+
+      // res.send(this.getAdminHTML(host as string, shop as string));
+      next();
+    });
+
+    // this.app.use('/admin', express.static(path.join(__dirname, '../../admin-frame/dist')));
+
     // Debug logging
     if (this.config.debug) {
       this.app.use((req, res, next) => {
@@ -79,31 +95,26 @@ export class MockShopifyAdminServer {
     this.app.get('/logo', (req: Request, res: Response) => {
       res.sendFile(path.join(__dirname, '../../assets/img/mock-bridge-logo-200px.jpg'));
     });
-    
+
     this.app.get('/favicon.ico', (req: Request, res: Response) => {
       res.sendFile(path.join(__dirname, '../../assets/img/mock-bridge-logo-200px.jpg'));
     });
-    
+
     // Main admin route - serves the mock Shopify Admin page
     this.app.get('/', (req: Request, res: Response) => {
       const hostBase64 = Buffer.from(`https://${this.config.shop}`).toString('base64');
       res.redirect(`/admin/apps/${this.config.clientId}?host=${hostBase64}&shop=${this.config.shop}`);
     });
-    
-    // Mock Shopify Admin page with embedded app
-    this.app.get('/admin/apps/:clientId', (req: Request, res: Response) => {
-      const { host, shop } = req.query;
-      
-      // Set CSP header to allow iframe embedding
-      res.setHeader('Content-Security-Policy', 
-        `frame-src 'self' ${this.config.appUrl}; ` +
-        `frame-ancestors 'self' localhost:*; ` +
-        `script-src 'self' 'unsafe-inline' 'unsafe-eval';`
-      );
-      
-      res.send(this.getAdminHTML(host as string, shop as string));
+
+    this.app.get('/api/config', (req: Request, res: Response) => {
+      res.json({
+        clientId: this.config.clientId,
+        shop: this.config.shop,
+        appUrl: this.config.appUrl,
+        appPath: this.config.appPath,
+      });
     });
-    
+
     // Session token endpoint
     this.app.post('/api/session-token', (req: Request, res: Response) => {
       const token = this.tokenGenerator.generateSessionToken({
@@ -112,20 +123,20 @@ export class MockShopifyAdminServer {
         clientSecret: this.config.clientSecret!,
         userId: this.mockUser.id,
       });
-      
+
       res.json({ token });
     });
-    
+
     // Mock GraphQL Admin API endpoint
     this.app.post('/admin/api/:version/graphql.json', (req: Request, res: Response) => {
       const authHeader = req.headers.authorization;
-      
+
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ 
-          errors: [{ message: 'Unauthorized' }] 
+        return res.status(401).json({
+          errors: [{ message: 'Unauthorized' }]
         });
       }
-      
+
       // For mock purposes, return basic shop data
       res.json({
         data: {
@@ -137,19 +148,19 @@ export class MockShopifyAdminServer {
         },
       });
     });
-    
+
     // Mock OAuth token exchange endpoint
     this.app.post('/admin/oauth/access_token', (req: Request, res: Response) => {
       const { client_id, client_secret, subject_token } = req.body;
-      
+
       if (client_id !== this.config.clientId! || client_secret !== this.config.clientSecret!) {
         return res.status(401).json({ error: 'invalid_client' });
       }
-      
+
       try {
         // Verify the session token
         this.tokenGenerator.verifySessionToken(subject_token);
-        
+
         // Return mock access tokens
         res.json({
           access_token: 'mock_access_token_' + Date.now(),
@@ -160,14 +171,14 @@ export class MockShopifyAdminServer {
         res.status(400).json({ error: 'invalid_grant' });
       }
     });
-    
+
     // Mock REST API endpoints
     this.app.get('/admin/api/:version/shop.json', (req: Request, res: Response) => {
       res.json({
         shop: this.mockShop,
       });
     });
-    
+
     // Mock app bridge script (served for embedded apps)
     this.app.get('/app-bridge.js', (req: Request, res: Response) => {
       res.type('application/javascript');
@@ -175,7 +186,7 @@ export class MockShopifyAdminServer {
       const srcPath = path.join(__dirname, '../../src/client/mock-app-bridge.js');
       res.sendFile(srcPath);
     });
-    
+
     // Catch-all for undefined routes
     this.app.use('*', (req: Request, res: Response) => {
       if (this.config.debug) {
@@ -189,10 +200,10 @@ export class MockShopifyAdminServer {
     const appUrl = new URL(this.config.appUrl);
     const basePath = this.config.appPath || '';
     const iframeSrc = `${this.config.appUrl}${basePath}?host=${host}&shop=${shop}&embedded=1`;
-    
+
     // Extract shop name for Shopify admin URLs (e.g., "test-shop" from "test-shop.myshopify.com")
     const shopName = shop.replace('.myshopify.com', '');
-    
+
     return `
 <!DOCTYPE html>
 <html lang="en">

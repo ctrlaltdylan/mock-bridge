@@ -33,7 +33,7 @@ class MockShopifyAdminServer {
             createdAt: new Date().toISOString(),
         };
         this.mockUser = {
-            id: '123456789',
+            id: this.config.userId || '123456789',
             email: 'test@mockshop.com',
             firstName: 'Test',
             lastName: 'User',
@@ -52,6 +52,18 @@ class MockShopifyAdminServer {
         this.app.use(body_parser_1.default.urlencoded({ extended: true }));
         // Serve static files from client directory
         this.app.use('/static', express_1.default.static(path_1.default.join(__dirname, '../client')));
+        this.app.use(express_1.default.static(path_1.default.join(__dirname, '../../admin-frame/dist')));
+        // Mock Shopify Admin page with embedded app
+        this.app.use('/admin/apps/:clientId', (req, res, next) => {
+            // const { host, shop } = req.query;
+            // Set CSP header to allow iframe embedding
+            res.setHeader('Content-Security-Policy', `frame-src 'self' ${this.config.appUrl}; ` +
+                `frame-ancestors 'self' localhost:*; ` +
+                `script-src 'self' 'unsafe-inline' 'unsafe-eval';`);
+            // res.send(this.getAdminHTML(host as string, shop as string));
+            next();
+        });
+        // this.app.use('/admin', express.static(path.join(__dirname, '../../admin-frame/dist')));
         // Debug logging
         if (this.config.debug) {
             this.app.use((req, res, next) => {
@@ -73,14 +85,13 @@ class MockShopifyAdminServer {
             const hostBase64 = Buffer.from(`https://${this.config.shop}`).toString('base64');
             res.redirect(`/admin/apps/${this.config.clientId}?host=${hostBase64}&shop=${this.config.shop}`);
         });
-        // Mock Shopify Admin page with embedded app
-        this.app.get('/admin/apps/:clientId', (req, res) => {
-            const { host, shop } = req.query;
-            // Set CSP header to allow iframe embedding
-            res.setHeader('Content-Security-Policy', `frame-src 'self' ${this.config.appUrl}; ` +
-                `frame-ancestors 'self' localhost:*; ` +
-                `script-src 'self' 'unsafe-inline' 'unsafe-eval';`);
-            res.send(this.getAdminHTML(host, shop));
+        this.app.get('/api/config', (req, res) => {
+            res.json({
+                clientId: this.config.clientId,
+                shop: this.config.shop,
+                appUrl: this.config.appUrl,
+                appPath: this.config.appPath,
+            });
         });
         // Session token endpoint
         this.app.post('/api/session-token', (req, res) => {
