@@ -8,8 +8,8 @@
 
   // Store for app instances
   const appInstances = new Map();
-  let currentSessionToken = null;
-  let tokenRefreshInterval = null;
+  let currentSessionToken: string | null = null;
+  let tokenRefreshInterval: number | null = null;
 
   // Mock App Bridge Actions
   const Actions = {
@@ -26,13 +26,13 @@
         Large: 'large',
         Full: 'full',
       },
-      create: function (app, options) {
+      create: function (app: any, options: any) {
         return {
           id: 'modal_' + Date.now(),
-          dispatch: function (action) {
+          dispatch: function (action: any) {
             app.dispatch({ type: action, payload: options });
           },
-          set: function (newOptions) {
+          set: function (newOptions: any) {
             Object.assign(options, newOptions);
             this.dispatch(Actions.Modal.Action.UPDATE);
           },
@@ -47,9 +47,9 @@
         SHOW: 'TOAST_SHOW',
         CLEAR: 'TOAST_CLEAR',
       },
-      create: function (app, options) {
+      create: function (app: any, options: any) {
         return {
-          dispatch: function (action) {
+          dispatch: function (action: any) {
             if (action === Actions.Toast.Action.SHOW) {
               console.log('[MockAppBridge] Toast:', options.message);
               // In a real implementation, show a toast UI
@@ -63,9 +63,9 @@
         START: 'LOADING_START',
         STOP: 'LOADING_STOP',
       },
-      create: function (app) {
+      create: function (app: any) {
         return {
-          dispatch: function (action) {
+          dispatch: function (action: any) {
             app.dispatch({ type: action });
           },
         };
@@ -75,9 +75,9 @@
       Action: {
         UPDATE: 'TITLEBAR_UPDATE',
       },
-      create: function (app, options) {
+      create: function (app: any, options: any) {
         return {
-          set: function (newOptions) {
+          set: function (newOptions: any) {
             Object.assign(options, newOptions);
             app.dispatch({ type: Actions.TitleBar.Action.UPDATE, payload: options });
           },
@@ -95,10 +95,10 @@
         ProductVariant: 'variant',
         Collection: 'collection',
       },
-      create: function (app, options) {
+      create: function (app: any, options: any) {
         const subscribers = new Map();
         return {
-          dispatch: function (action) {
+          dispatch: function (action: any) {
             if (action === Actions.ResourcePicker.Action.OPEN) {
               // Mock selection after a delay
               setTimeout(() => {
@@ -117,7 +117,7 @@
               }, 100);
             }
           },
-          subscribe: function (action, handler) {
+          subscribe: function (action: any, handler: any) {
             const id = Date.now();
             subscribers.set(id, { action, handler });
             return () => subscribers.delete(id);
@@ -131,19 +131,19 @@
         REMOTE: 'REMOTE_REDIRECT',
         ADMIN_PATH: 'ADMIN_PATH_REDIRECT',
       },
-      create: function (app) {
+      create: function (app: any) {
         return {
-          dispatch: function (action, payload) {
+          dispatch: function (action: any, payload: any) {
             if (action === Actions.Redirect.Action.REMOTE) {
               window.open(payload.url, payload.newContext ? '_blank' : '_self');
             }
           },
         };
       },
-      toRemote: function (payload) {
+      toRemote: function (payload: any) {
         return { type: Actions.Redirect.Action.REMOTE, payload };
       },
-      toApp: function (payload) {
+      toApp: function (payload: any) {
         return { type: Actions.Redirect.Action.APP, payload };
       },
     },
@@ -159,14 +159,14 @@
 
   // Utilities for App Bridge
   const utilities = {
-    getSessionToken: async function (app) {
+    getSessionToken: async function (_app: any) {
       // Request session token from parent frame
       return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Session token request timeout'));
         }, 5000);
 
-        const handler = function (event) {
+        const handler = function (event: any) {
           if (event.data && event.data.type === 'SESSION_TOKEN_RESPONSE') {
             clearTimeout(timeout);
             window.removeEventListener('message', handler);
@@ -185,12 +185,12 @@
       });
     },
 
-    authenticatedFetch: function (app, fetch) {
-      return async function (...args) {
+    authenticatedFetch: function (app: any, fetch: any) {
+      return async function (...args: any[]) {
         const token = await utilities.getSessionToken(app);
 
-        let url = args[0];
-        let options = args[1] || {};
+        const url = args[0];
+        const options = args[1] || {};
 
         if (typeof url === 'string') {
           options.headers = options.headers || {};
@@ -207,7 +207,7 @@
   };
 
   // Main createApp function
-  function createApp(config) {
+  function createApp(config: any) {
     if (!config.apiKey) {
       throw new Error('API key is required');
     }
@@ -220,7 +220,7 @@
       listeners: new Set(),
       errorListeners: new Set(),
 
-      dispatch: function (action) {
+      dispatch: function (action: any) {
         console.log('[MockAppBridge] Dispatching:', action);
 
         // Send to parent frame
@@ -231,12 +231,12 @@
         }, '*');
 
         // Notify local listeners
-        this.listeners.forEach(listener => listener(action));
+        this.listeners.forEach((listener: any) => listener(action));
       },
 
-      subscribe: function (eventNameOrCallback, callback) {
+      subscribe: function (eventNameOrCallback: any, callback: any) {
         const handler = callback || eventNameOrCallback;
-        const wrappedHandler = (action) => {
+        const wrappedHandler = (action: any) => {
           if (typeof eventNameOrCallback === 'string') {
             if (action.type === eventNameOrCallback) {
               handler(action);
@@ -253,7 +253,7 @@
         };
       },
 
-      error: function (callback) {
+      error: function (callback: any) {
         this.errorListeners.add(callback);
         return () => {
           this.errorListeners.delete(callback);
@@ -268,7 +268,7 @@
             email: 'test@mockshop.com',
           },
           shop: {
-            domain: new URL(Buffer.from(config.host, 'base64').toString()).hostname,
+            domain: new URL(atob(config.host)).hostname,
             name: 'Mock Shop',
           },
         };
@@ -284,7 +284,7 @@
 
     // Start token refresh
     if (!tokenRefreshInterval) {
-      tokenRefreshInterval = setInterval(async () => {
+      tokenRefreshInterval = window.setInterval(async () => {
         try {
           await utilities.getSessionToken(app);
         } catch (error) {
@@ -313,8 +313,8 @@
   };
 
   // Export to window - match real Shopify App Bridge globals
-  window.createApp = createApp;
-  window.shopifyAppBridge = {
+  (window as any).createApp = createApp;
+  (window as any).shopifyAppBridge = {
     createApp: createApp,
     actions: Actions,
     utilities: utilities,
@@ -322,7 +322,7 @@
   };
 
   // Create the 'shopify' global that @shopify/app-bridge-react expects
-  window.shopify = {
+  (window as any).shopify = {
     // TODO: Ready and loading need full implementation
     ready: Promise.resolve(true),
     loading: () => void 0,
@@ -348,7 +348,7 @@
           reject(new Error('Session token request timeout'));
         }, 5000);
 
-        const handler = function (event) {
+        const handler = function (event: any) {
           if (event.data && event.data.type === 'SESSION_TOKEN_RESPONSE') {
             clearTimeout(timeout);
             window.removeEventListener('message', handler);
@@ -372,43 +372,13 @@
 
   // For @shopify/app-bridge-react compatibility, we need to ensure
   // that the library can find the App Bridge functions
-  if (!window.ShopifyAppBridge) {
-    window.ShopifyAppBridge = {
+  if (!(window as any).ShopifyAppBridge) {
+    (window as any).ShopifyAppBridge = {
       createApp: createApp,
       actions: Actions,
       utilities: utilities,
       platform: platform,
     };
-  }
-
-  // Also export as module if available
-  if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-      createApp: createApp,
-      Modal: Actions.Modal,
-      Toast: Actions.Toast,
-      Loading: Actions.Loading,
-      TitleBar: Actions.TitleBar,
-      ResourcePicker: Actions.ResourcePicker,
-      Redirect: Actions.Redirect,
-      Error: Actions.Error,
-    };
-  }
-
-  // AMD support
-  if (typeof define === 'function' && define.amd) {
-    define('app-bridge', [], function () {
-      return {
-        createApp: createApp,
-        Modal: Actions.Modal,
-        Toast: Actions.Toast,
-        Loading: Actions.Loading,
-        TitleBar: Actions.TitleBar,
-        ResourcePicker: Actions.ResourcePicker,
-        Redirect: Actions.Redirect,
-        Error: Actions.Error,
-      };
-    });
   }
 
   console.log('[MockAppBridge] Client library loaded');
@@ -420,7 +390,7 @@
     return _fetch(url, {
       ...options,
       headers: {
-        ...options.headers,
+        ...(options?.headers || {}),
         'Authorization': `Bearer ${currentSessionToken}`,
       },
     });
