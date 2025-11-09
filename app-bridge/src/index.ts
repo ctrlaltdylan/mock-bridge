@@ -377,7 +377,7 @@ import { app } from "./features/app";
           if (event.data && event.data.type === 'SESSION_TOKEN_RESPONSE') {
             clearTimeout(timeout);
             window.removeEventListener('message', handler);
-            console.log('[MockAppBridge] Session token received:', event.data.token);
+
             currentSessionToken = event.data.token;
             resolve(event.data.token);
           }
@@ -385,8 +385,6 @@ import { app } from "./features/app";
 
         window.addEventListener('message', handler);
 
-        // Post message to parent requesting token
-        console.log('[MockAppBridge] Requesting session token from parent');
         window.parent.postMessage({
           type: 'SESSION_TOKEN_REQUEST',
           source: 'app',

@@ -2,15 +2,17 @@
   "name": "app-bridge",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "watch": "tsc --watch",
+    "watch": "npm run build -- --watch",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "build": "tsdown src/index.ts --out-dir dist --format iife --platform browser"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@shopify/app-bridge-types": "^0.5.3"
+    "@shopify/app-bridge-types": "^0.5.3",
+    "tsdown": "^0.16.1"
   }
 }

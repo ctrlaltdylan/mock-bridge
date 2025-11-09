@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useConfig } from "./useConfig";
+import { getFeatureStore, type FeatureActionName, type FeatureActionPayload, type FeatureName } from "../store/features";
+
+export type FeatureActionRequest<
+  F extends FeatureName = FeatureName,
+  A extends FeatureActionName<F> = FeatureActionName<F>,
+  P extends FeatureActionPayload<F, A> = FeatureActionPayload<F, A>
+> = {
+  feature: F;
+  action: A | FeatureActionName<F>;
+  payload: P | FeatureActionPayload<F, A>;
+}
 
 export function useMockBridge() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -22,7 +33,6 @@ export function useMockBridge() {
         shop: config.shop,
         clientId: config.clientId,
       }, '*');
-      console.log('[MockAdmin] Mock environment signal sent');
     } catch (e) {
       console.warn('[MockAdmin] Could not signal mock environment:', (e as Error).message);
     }
@@ -60,8 +70,6 @@ export function useMockBridge() {
 
       // Handle App Bridge messages from the embedded app
       if (event.data && event.data.type) {
-        console.log('[MockAdmin] Received message:', event.data);
-
         // Handle session token requests
         if (event.data.type === 'SESSION_TOKEN_REQUEST') {
           // Generate and send back a session token
@@ -71,6 +79,26 @@ export function useMockBridge() {
               token: token,
             }, '*');
           });
+        }
+
+        // Embedded app called something, like shopify.modal.show('modal_id')
+        // Proxy the calls to their corresponding feature store
+        if (event.data.type === 'FEATURE_ACTION_REQUEST') {
+          const { feature, action, payload } = event.data as FeatureActionRequest;
+
+          const featureStore = getFeatureStore(feature);
+          const actionFn = featureStore.getState()[action];
+
+          if (actionFn) {
+            actionFn(payload);
+          } else {
+            console.warn('[MockAdmin] Unknown feature action:', action);
+          }
+
+          iframeRef.current?.contentWindow?.postMessage({
+            type: 'FEATURE_ACTION_RESPONSE',
+            action_id: event.data.action_id,
+          }, '*');
         }
       }
     }
@@ -90,15 +118,11 @@ export function useMockBridge() {
     // Send signal immediately when iframe starts loading
     iframeRef.current?.addEventListener('load', handleIframeLoad);
 
-    // Log that mock admin is ready
-    console.log('[MockShopifyAdmin] Ready - Shop: ${shop}, Client ID: ${this.config.clientId}');
-
     return () => {
       window.removeEventListener('message', handleMessage);
       iframe.removeEventListener('load', handleIframeLoad);
     };
   }, [config, sendMockSignal, sessionToken]);
-
 
   const iframeSrc = (() => {
     if (!config || !sessionToken) return '';
@@ -106,8 +130,6 @@ export function useMockBridge() {
     const basePath = config.appPath || '';
     const host = btoa(config.shop);
     const idToken = sessionToken;
-
-    console.log('Host', host, 'Shop', config.shop, 'ID Token', idToken);
 
     return `${config.appUrl}${basePath}?host=${host}&shop=${config.shop}&embedded=1&id_token=${idToken}`;
   })();
@@ -117,4 +139,4 @@ export function useMockBridge() {
     iframeSrc
     // iframeSrc: ''
   };
-}
+} 
