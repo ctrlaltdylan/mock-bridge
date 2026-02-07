@@ -51,6 +51,17 @@ function observeModalElements() {
     };
   }
 
+  // Extract HTML content from modal (excluding ui-title-bar)
+  function extractModalHtml(modalElement: HTMLElement): string {
+    const clone = modalElement.cloneNode(true) as HTMLElement;
+    // Remove ui-title-bar from clone to get just the body content
+    const titleBar = clone.querySelector('ui-title-bar');
+    if (titleBar) {
+      titleBar.remove();
+    }
+    return clone.innerHTML.trim();
+  }
+
   // Function to sync a modal to parent frame
   async function syncModalToParent(modalElement: HTMLElement) {
     const data = extractModalData(modalElement);
@@ -61,6 +72,15 @@ function observeModalElements() {
         heading: data.title,
         content: data
       });
+
+      // Also sync the HTML content
+      const html = extractModalHtml(modalElement);
+      if (html) {
+        await invokeFeature('modal', 'updateHtml', {
+          id: data.id,
+          html: html
+        });
+      }
     }
   }
 

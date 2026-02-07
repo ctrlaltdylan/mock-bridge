@@ -4,7 +4,9 @@ declare global {
   interface Window {
     shopify: {
       modal: {
-        show(id: string, options?: { title?: string; message?: string }): Promise<void>;
+        show(id: string): Promise<void>;
+        hide(id: string): Promise<void>;
+        toggle(id: string): Promise<void>;
       };
       toast: {
         show(message: string, options?: { duration?: number }): Promise<void>;
@@ -65,6 +67,19 @@ async function init() {
     <hr>
     <h2>Results</h2>
     <pre id="results"></pre>
+
+    <!-- Modal definition following Shopify App Bridge pattern -->
+    <ui-modal id="my-modal">
+      <div style="padding: 20px;">
+        <h2>Test Modal</h2>
+        <p>This is a test modal from the mock test app!</p>
+        <p>The modal content is defined using the <code>&lt;ui-modal&gt;</code> element pattern from Shopify App Bridge.</p>
+      </div>
+      <ui-title-bar title="Test Modal">
+        <button variant="primary" id="modal-save-btn">Save</button>
+        <button id="modal-cancel-btn">Cancel</button>
+      </ui-title-bar>
+    </ui-modal>
   `;
 
   const status = document.getElementById('status')!;
@@ -105,17 +120,27 @@ async function init() {
     return;
   }
 
-  // Modal test
+  // Modal test - using the Shopify App Bridge pattern
+  // The modal content is defined in <ui-modal id="my-modal"> element above
   document.getElementById('show-modal')?.addEventListener('click', async () => {
     try {
-      await window.shopify.modal.show('my-modal', {
-        title: 'Test Modal',
-        message: 'This is a test modal from the mock test app!'
-      });
+      // Can use either shopify.modal.show() or element.show()
+      await window.shopify.modal.show('my-modal');
       results.textContent = 'Modal shown successfully';
     } catch (e) {
       results.textContent = `Modal error: ${e}`;
     }
+  });
+
+  // Modal button handlers
+  document.getElementById('modal-save-btn')?.addEventListener('click', () => {
+    results.textContent = 'Modal Save clicked!';
+    window.shopify.modal.hide('my-modal');
+  });
+
+  document.getElementById('modal-cancel-btn')?.addEventListener('click', () => {
+    results.textContent = 'Modal Cancel clicked!';
+    window.shopify.modal.hide('my-modal');
   });
 
   // Toast test
