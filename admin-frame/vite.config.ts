@@ -4,8 +4,7 @@ import { config } from 'dotenv';
 
 config({ path: '../.env' });
 
-const MOCK_API_PORT = process.env.SHOPIFY_PORT;
-if (!MOCK_API_PORT) throw new Error('SHOPIFY_PORT is not set');
+const MOCK_API_PORT = process.env.SHOPIFY_PORT || '3080';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -19,7 +18,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: `http://localhost:${process.env.SHOPIFY_PORT}`,
+        target: `http://localhost:${MOCK_API_PORT}`,
         changeOrigin: true,
       },
     },

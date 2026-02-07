@@ -182,7 +182,7 @@ export class MockShopifyAdminServer {
     // Mock app bridge script (served for embedded apps)
     this.app.get('/app-bridge.js', (req: Request, res: Response) => {
       res.type('application/javascript');
-      const srcPath = path.join(__dirname, '../../app-bridge/dist/index.iife.js');
+      const srcPath = path.join(__dirname, '../../app-bridge/dist/index.js');
       res.sendFile(srcPath);
     });
 

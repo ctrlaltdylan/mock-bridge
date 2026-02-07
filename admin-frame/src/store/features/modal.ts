@@ -25,11 +25,24 @@ type ModalFeatureState = {
   }>;
 }
 
+const defaultModalState = {
+  open: false,
+  heading: '',
+  content: {
+    id: '',
+    title: '',
+    variant: 'base',
+    src: null,
+    buttons: [],
+  },
+  html: '',
+};
+
 export const useModalFeatureStore = create(combine(
   { modalStates: {} } as ModalFeatureState,
   set => ({
     show: (payload: { id: string }) => set(state => {
-      const modalState = state.modalStates[payload.id];
+      const modalState = state.modalStates[payload.id] || { ...defaultModalState, content: { ...defaultModalState.content, id: payload.id } };
 
       return {
         modalStates: {
@@ -42,7 +55,7 @@ export const useModalFeatureStore = create(combine(
       };
     }),
     hide: (payload: { id: string }) => set(state => {
-      const modalState = state.modalStates[payload.id];
+      const modalState = state.modalStates[payload.id] || { ...defaultModalState, content: { ...defaultModalState.content, id: payload.id } };
 
       return {
         modalStates: {
@@ -55,7 +68,7 @@ export const useModalFeatureStore = create(combine(
       };
     }),
     toggle: (payload: { id: string }) => set(state => {
-      const modalState = state.modalStates[payload.id];
+      const modalState = state.modalStates[payload.id] || { ...defaultModalState, content: { ...defaultModalState.content, id: payload.id } };
 
       return {
         modalStates: {
