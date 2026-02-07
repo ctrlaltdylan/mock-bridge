@@ -9,7 +9,6 @@ export declare class MockShopifyAdminServer {
     constructor(config: MockShopifyAdminConfig);
     private setupMiddleware;
     private setupRoutes;
-    private getAdminHTML;
     start(): Promise<void>;
     stop(): Promise<void>;
     getConfig(): MockShopifyAdminConfig;

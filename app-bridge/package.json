@@ -1,0 +1,19 @@
+{
+  "name": "app-bridge",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "watch": "npm run build -- --watch",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "esbuild src/index.ts --bundle --outfile=dist/index.js --format=iife --platform=browser"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@shopify/app-bridge-types": "^0.5.3",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -17,7 +17,9 @@ export async function startMockShopifyAdmin(config: {
   debug?: boolean;
 }) {
   const { MockShopifyAdminServer } = await import('./server');
+
   const server = new MockShopifyAdminServer(config);
   await server.start();
+
   return server;
 }

@@ -106,21 +106,6 @@ function validateConfig(config) {
     }
 }
 /**
- * Print configuration summary
- */
-function printConfigSummary(config) {
-    console.log();
-    console.log(chalk_1.default.blue('🔧 Mock Shopify Admin Configuration:'));
-    console.log(chalk_1.default.gray('   '), chalk_1.default.white('App URL:'), chalk_1.default.cyan(config.appUrl));
-    console.log(chalk_1.default.gray('   '), chalk_1.default.white('Client ID:'), chalk_1.default.cyan(config.clientId));
-    console.log(chalk_1.default.gray('   '), chalk_1.default.white('Mock Shop:'), chalk_1.default.cyan(config.shop));
-    console.log(chalk_1.default.gray('   '), chalk_1.default.white('Admin Port:'), chalk_1.default.cyan(config.port));
-    if (config.debug) {
-        console.log(chalk_1.default.gray('   '), chalk_1.default.white('Debug Mode:'), chalk_1.default.yellow('Enabled'));
-    }
-    console.log();
-}
-/**
  * Start command implementation
  */
 async function startCommand(options) {
@@ -171,8 +156,6 @@ async function startCommand(options) {
             console.log(chalk_1.default.gray('   npx @getverdict/mock-bridge http://localhost:3000 --client-id your-real-id'));
             console.log();
         }
-        // Print configuration summary
-        printConfigSummary(finalConfig);
         // Create and start the mock server
         const server = new server_1.MockShopifyAdminServer(finalConfig);
         await server.start();
@@ -292,7 +275,7 @@ program
     .argument('[app-url]', 'Your app\'s URL (e.g., http://localhost:3000/shopify)')
     .option('-i, --client-id <id>', 'Your Shopify app\'s client ID (optional, defaults to development ID)')
     .option('-s, --client-secret <secret>', 'Mock client secret (development only)')
-    .option('--shop <domain>', 'Mock shop domain', 'test-shop.myshopify.com')
+    .option('--shop <domain>', 'Mock shop domain')
     .option('--port <number>', 'Mock admin port', (val) => parseInt(val, 10), 3080)
     .option('-c, --config <file>', 'Path to configuration file')
     .option('-d, --debug', 'Enable debug logging', false)
@@ -310,7 +293,7 @@ program
     .argument('[app-url]', 'Your app\'s URL (e.g., http://localhost:3000/shopify)')
     .option('-i, --client-id <id>', 'Your Shopify app\'s client ID (optional, defaults to development ID)')
     .option('-s, --client-secret <secret>', 'Mock client secret (development only)')
-    .option('--shop <domain>', 'Mock shop domain', 'test-shop.myshopify.com')
+    .option('--shop <domain>', 'Mock shop domain')
     .option('--port <number>', 'Mock admin port', (val) => parseInt(val, 10), 3080)
     .option('-c, --config <file>', 'Path to configuration file')
     .option('-d, --debug', 'Enable debug logging', false)

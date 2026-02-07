@@ -4,6 +4,7 @@ export interface MockShopifyAdminConfig {
     appPath?: string;
     clientId?: string;
     clientSecret?: string;
+    userId?: string;
     shop?: string;
     apiVersion?: string;
     scopes?: string[];

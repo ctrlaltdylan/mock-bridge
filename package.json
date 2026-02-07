@@ -1,6 +1,6 @@
 {
   "name": "@getverdict/mock-bridge",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "Mock Shopify App Bridge for testing and development",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,8 +8,12 @@
     "mock-bridge": "dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "ts-node src/server/index.ts",
+    "build": "tsc && npm run build:admin-frame && npm run build:app-bridge",
+    "build:admin-frame": "cd admin-frame && npm run build",
+    "build:app-bridge": "cd app-bridge && npm run build",
+    "dev": "concurrently \"ts-node -r dotenv/config src/server/dev.ts\" \"npm run dev:app-bridge\" \"npm run dev:admin-frame\"",
+    "dev:app-bridge": "cd app-bridge && npm run watch",
+    "dev:admin-frame": "cd admin-frame && npm run dev",
     "start": "node dist/server/index.js",
     "watch": "tsc --watch",
     "clean": "rm -rf dist"
@@ -24,24 +28,29 @@
   "author": "Verdict",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "jsonwebtoken": "^9.0.2",
-    "uuid": "^9.0.1",
     "body-parser": "^1.20.2",
+    "chalk": "^4.1.2",
     "commander": "^11.1.0",
-    "chalk": "^4.1.2"
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.5",
-    "@types/uuid": "^9.0.7",
     "@types/node": "^20.10.5",
-    "typescript": "^5.3.3",
-    "ts-node": "^10.9.2"
+    "@types/uuid": "^9.0.7",
+    "concurrently": "^9.2.1",
+    "dotenv": "^17.2.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -4,6 +4,7 @@ export interface MockShopifyAdminConfig {
   appPath?: string;  // Optional path to append to appUrl (e.g., '/shopify', '/admin', '')
   clientId?: string;
   clientSecret?: string;
+  userId?: string;
   shop?: string;
   apiVersion?: string;
   scopes?: string[];

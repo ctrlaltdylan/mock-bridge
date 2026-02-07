@@ -55,3 +55,9 @@ pids/
 # Temporary files
 tmp/
 temp/
+
+# Mock bridge configuration
+dev.mock-bridge.json
+
+# Test screenshots
+*.png
