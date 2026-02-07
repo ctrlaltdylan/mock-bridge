@@ -11,6 +11,12 @@ declare global {
       toast: {
         show(message: string, options?: { duration?: number }): Promise<void>;
       };
+      saveBar: {
+        show(id: string): Promise<void>;
+        hide(id: string): Promise<void>;
+        toggle(id: string): Promise<void>;
+      };
+      loading(isLoading: boolean): void;
       idToken(): Promise<string>;
     };
   }
@@ -60,10 +66,33 @@ async function init() {
     <h1>Mock Bridge Test App</h1>
     <div id="status">Initializing...</div>
     <hr>
+
     <h2>Test Actions</h2>
-    <button id="show-modal">Show Modal</button>
-    <button id="show-toast">Show Toast</button>
-    <button id="get-token">Get Session Token</button>
+    <div class="button-group">
+      <button id="show-modal">Show Modal</button>
+      <button id="show-toast">Show Toast</button>
+      <button id="get-token">Get Session Token</button>
+    </div>
+
+    <h3>Loading API</h3>
+    <div class="button-group">
+      <button id="start-loading">Start Loading</button>
+      <button id="stop-loading">Stop Loading</button>
+    </div>
+
+    <h3>Save Bar API</h3>
+    <div class="button-group">
+      <button id="show-savebar">Show Save Bar</button>
+      <button id="hide-savebar">Hide Save Bar</button>
+    </div>
+
+    <h3>Form with Auto Save Bar</h3>
+    <form id="test-form" data-save-bar data-discard-confirmation>
+      <label>
+        Name: <input type="text" name="name" value="Original Value" />
+      </label>
+    </form>
+
     <hr>
     <h2>Results</h2>
     <pre id="results"></pre>
@@ -80,6 +109,17 @@ async function init() {
         <button id="modal-cancel-btn">Cancel</button>
       </ui-title-bar>
     </ui-modal>
+
+    <!-- Save Bar definition -->
+    <ui-save-bar id="my-save-bar"></ui-save-bar>
+
+    <!-- Navigation Menu definition (will appear in sidebar) -->
+    <ui-nav-menu>
+      <a href="/" rel="home">Home</a>
+      <a href="/settings">Settings</a>
+      <a href="/products">Products</a>
+      <a href="/orders">Orders</a>
+    </ui-nav-menu>
   `;
 
   const status = document.getElementById('status')!;
@@ -121,10 +161,8 @@ async function init() {
   }
 
   // Modal test - using the Shopify App Bridge pattern
-  // The modal content is defined in <ui-modal id="my-modal"> element above
   document.getElementById('show-modal')?.addEventListener('click', async () => {
     try {
-      // Can use either shopify.modal.show() or element.show()
       await window.shopify.modal.show('my-modal');
       results.textContent = 'Modal shown successfully';
     } catch (e) {
@@ -161,6 +199,42 @@ async function init() {
     } catch (e) {
       results.textContent = `Token error: ${e}`;
     }
+  });
+
+  // Loading API tests
+  document.getElementById('start-loading')?.addEventListener('click', () => {
+    window.shopify.loading(true);
+    results.textContent = 'Loading started - check the top of the page for the loading bar';
+  });
+
+  document.getElementById('stop-loading')?.addEventListener('click', () => {
+    window.shopify.loading(false);
+    results.textContent = 'Loading stopped';
+  });
+
+  // Save Bar API tests
+  document.getElementById('show-savebar')?.addEventListener('click', async () => {
+    try {
+      await window.shopify.saveBar.show('my-save-bar');
+      results.textContent = 'Save bar shown - check the bottom of the page';
+    } catch (e) {
+      results.textContent = `Save bar error: ${e}`;
+    }
+  });
+
+  document.getElementById('hide-savebar')?.addEventListener('click', async () => {
+    try {
+      await window.shopify.saveBar.hide('my-save-bar');
+      results.textContent = 'Save bar hidden';
+    } catch (e) {
+      results.textContent = `Save bar error: ${e}`;
+    }
+  });
+
+  // Form submission handler
+  document.getElementById('test-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    results.textContent = 'Form submitted! Save bar should hide automatically.';
   });
 }
 

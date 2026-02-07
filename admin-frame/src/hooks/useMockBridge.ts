@@ -87,10 +87,11 @@ export function useMockBridge() {
           const { feature, action, payload } = event.data as FeatureActionRequest;
 
           const featureStore = getFeatureStore(feature);
-          const actionFn = featureStore.getState()[action];
+          const state = featureStore.getState() as Record<string, unknown>;
+          const actionFn = state[action as string];
 
-          if (actionFn) {
-            actionFn(payload);
+          if (typeof actionFn === 'function') {
+            (actionFn as (payload: unknown) => void)(payload);
           } else {
             console.warn('[MockAdmin] Unknown feature action:', action);
           }

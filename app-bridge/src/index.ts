@@ -19,6 +19,8 @@ import { support } from "./features/support";
 import { reviews } from "./features/reviews";
 import { picker } from "./features/picker";
 import { app } from "./features/app";
+import { loading } from "./features/loading";
+import { navMenu } from "./features/nav-menu";
 
 (function (window) {
   'use strict';
@@ -359,7 +361,7 @@ import { app } from "./features/app";
 
     // Lifecycle methods
     ready: Promise.resolve(),
-    loading: () => void 0,
+    loading: loading(),
 
     // Origin should be empty string for mock
     origin: '',
@@ -403,6 +405,9 @@ import { app } from "./features/app";
       platform: platform,
     };
   }
+
+  // Initialize nav menu observer
+  navMenu();
 
   console.log('[MockAppBridge] Client library loaded');
 
