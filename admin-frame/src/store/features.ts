@@ -1,7 +1,13 @@
 import { useModalFeatureStore } from "./features/modal";
+import { useLoadingFeatureStore } from "./features/loading";
+import { useSaveBarFeatureStore } from "./features/save-bar";
+import { useNavMenuFeatureStore } from "./features/nav-menu";
 
 export const features = {
   modal: useModalFeatureStore,
+  loading: useLoadingFeatureStore,
+  saveBar: useSaveBarFeatureStore,
+  navMenu: useNavMenuFeatureStore,
 }
 
 export type FeatureName = keyof typeof features;
