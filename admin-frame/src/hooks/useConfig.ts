@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 
+type AdminApiConfig = 'mock' | { proxy: string } | { accessToken: string };
+
 interface Config {
   clientId: string;
   shop: string;
   host: string;
   appUrl: string;
   appPath?: string;
+  adminApi?: AdminApiConfig;
 }
 
 let cachedConfig: Config | null = null;

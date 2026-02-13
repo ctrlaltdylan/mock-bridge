@@ -411,16 +411,135 @@ import { navMenu } from "./features/nav-menu";
 
   console.log('[MockAppBridge] Client library loaded');
 
-  const _fetch = window.fetch;
-  window.fetch = (...args) => {
-    const [url, options] = args;
+  // Admin API configuration - will be fetched from server
+  type AdminApiConfig = 'mock' | { proxy: string } | { accessToken: string };
+  let adminApiConfig: AdminApiConfig = 'mock';
+  let mockServerUrl = '';
 
-    return _fetch(url, {
+  // Detect mock server URL from script src or parent origin
+  const detectMockServerUrl = (): string => {
+    // Try to get from current script src
+    const scripts = document.querySelectorAll('script[src*="app-bridge.js"]');
+    for (const script of scripts) {
+      const src = (script as HTMLScriptElement).src;
+      if (src) {
+        const url = new URL(src);
+        return url.origin;
+      }
+    }
+    // Fallback to parent origin for embedded apps
+    try {
+      if (window.parent !== window) {
+        return window.parent.location.origin;
+      }
+    } catch (e) {
+      // Cross-origin, try to extract from referrer
+    }
+    // Default fallback
+    return 'http://localhost:3080';
+  };
+
+  mockServerUrl = detectMockServerUrl();
+
+  // Fetch admin API config from server
+  const fetchAdminApiConfig = async (): Promise<void> => {
+    try {
+      const response = await fetch(`${mockServerUrl}/api/config`);
+      const config = await response.json();
+      if (config.adminApi) {
+        adminApiConfig = config.adminApi;
+        console.log('[MockAppBridge] Admin API config:', adminApiConfig);
+      }
+    } catch (error) {
+      console.warn('[MockAppBridge] Could not fetch admin API config, using default (mock)');
+    }
+  };
+
+  // Start fetching config immediately
+  fetchAdminApiConfig();
+
+  // Check if URL is an Admin API request
+  const isAdminApiRequest = (url: string): boolean => {
+    if (typeof url !== 'string') return false;
+    return url.includes('/admin/api/') ||
+           url.match(/^https:\/\/[^/]+\.myshopify\.com\/admin\/api\//) !== null;
+  };
+
+  // Override fetch to intercept Admin API requests
+  const _fetch = window.fetch;
+  window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
+    const [input, init] = args;
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url;
+    const options = init || {};
+
+    // Add authorization header to all requests
+    const headers: Record<string, string> = {};
+    if (options.headers) {
+      if (options.headers instanceof Headers) {
+        options.headers.forEach((value, key) => {
+          headers[key] = value;
+        });
+      } else if (Array.isArray(options.headers)) {
+        options.headers.forEach(([key, value]) => {
+          headers[key] = value;
+        });
+      } else {
+        Object.assign(headers, options.headers);
+      }
+    }
+
+    // Add session token if available
+    if (currentSessionToken) {
+      headers['Authorization'] = `Bearer ${currentSessionToken}`;
+    }
+
+    // Check if this is an Admin API request
+    if (isAdminApiRequest(url)) {
+      console.log('[MockAppBridge] Intercepting Admin API request:', url);
+
+      if (adminApiConfig === 'mock') {
+        // Route to mock server
+        return _fetch(`${mockServerUrl}/mock-admin-api`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+          },
+          body: JSON.stringify({
+            url,
+            method: options.method || 'GET',
+            body: options.body,
+          }),
+        });
+      } else if (typeof adminApiConfig === 'object' && 'proxy' in adminApiConfig) {
+        // Route to app's proxy endpoint
+        return _fetch(adminApiConfig.proxy, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+          },
+          body: JSON.stringify({
+            url,
+            method: options.method || 'GET',
+            body: options.body,
+          }),
+        });
+      } else if (typeof adminApiConfig === 'object' && 'accessToken' in adminApiConfig) {
+        // Make direct request to Shopify with access token
+        headers['X-Shopify-Access-Token'] = adminApiConfig.accessToken;
+        delete headers['Authorization']; // Use access token instead
+        return _fetch(url, {
+          ...options,
+          headers,
+        });
+      }
+    }
+
+    // For non-Admin API requests, just add auth header
+    return _fetch(input, {
       ...options,
-      headers: {
-        ...(options?.headers || {}),
-        'Authorization': `Bearer ${currentSessionToken}`,
-      },
+      headers,
     });
-  }
+  };
 })(window);
