@@ -16,7 +16,8 @@
     "dev:admin-frame": "cd admin-frame && npm run dev",
     "start": "node dist/server/index.js",
     "watch": "tsc --watch",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepare": "cd admin-frame && npm install && cd ../app-bridge && npm install && cd .. && npm run build"
   },
   "keywords": [
     "shopify",
