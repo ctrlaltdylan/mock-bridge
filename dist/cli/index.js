@@ -146,6 +146,7 @@ async function startCommand(options) {
             ...(options.shop && { shop: options.shop }),
             ...(options.port && { port: options.port }),
             ...(options.debug && { debug: options.debug }),
+            ...(options.proxy && { proxy: options.proxy }),
         };
         // Validate configuration
         validateConfig(finalConfig);
@@ -175,6 +176,13 @@ async function startCommand(options) {
         console.log(chalk_1.default.gray('   ✅ Mock App Bridge APIs'));
         console.log(chalk_1.default.gray('   ✅ Playwright/automation support'));
         console.log(chalk_1.default.gray('   ✅ Chrome DevTools MCP compatibility'));
+        if (finalConfig.proxy) {
+            console.log(chalk_1.default.gray('   ✅ Same-origin proxy mode (Cypress compatible)'));
+            console.log();
+            console.log(chalk_1.default.white.bold('🔀 Proxy Mode:'));
+            console.log(chalk_1.default.gray('   App is proxied at'), chalk_1.default.green(`http://localhost:${finalConfig.port}/__proxy/`));
+            console.log(chalk_1.default.gray('   Iframe is same-origin — Cypress can access it directly'));
+        }
         console.log();
         console.log(chalk_1.default.gray('Press Ctrl+C to stop the server'));
         // Handle graceful shutdown
@@ -286,6 +294,7 @@ program
     .option('--port <number>', 'Mock admin port', (val) => parseInt(val, 10), 3080)
     .option('-c, --config <file>', 'Path to configuration file')
     .option('-d, --debug', 'Enable debug logging', false)
+    .option('--proxy', 'Proxy app through mock-bridge for same-origin iframe (enables Cypress support)', false)
     .action(async (appUrl, options) => {
     // If app-url is provided as argument, use it
     if (appUrl) {
@@ -304,6 +313,7 @@ program
     .option('--port <number>', 'Mock admin port', (val) => parseInt(val, 10), 3080)
     .option('-c, --config <file>', 'Path to configuration file')
     .option('-d, --debug', 'Enable debug logging', false)
+    .option('--proxy', 'Proxy app through mock-bridge for same-origin iframe (enables Cypress support)', false)
     .action(async (appUrl, options) => {
     if (appUrl) {
         options.appUrl = appUrl;

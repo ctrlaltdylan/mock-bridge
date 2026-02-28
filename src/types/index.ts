@@ -22,6 +22,7 @@ export interface MockShopifyAdminConfig {
   webhooks?: MockWebhook[];
   debug?: boolean;
   adminApi?: AdminApiConfig;  // How to handle Admin API requests (default: 'mock')
+  proxy?: boolean;  // Reverse-proxy the app through mock-bridge for same-origin iframe (Cypress support)
 }
 
 export interface MockWebhook {

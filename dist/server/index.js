@@ -8,6 +8,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const body_parser_1 = __importDefault(require("body-parser"));
 const path_1 = __importDefault(require("path"));
+const http_proxy_middleware_1 = require("http-proxy-middleware");
 const token_generator_1 = require("../auth/token-generator");
 const constants_1 = require("../auth/constants");
 class MockShopifyAdminServer {
@@ -58,7 +59,8 @@ class MockShopifyAdminServer {
         this.app.use('/admin/apps/:clientId', (req, res, next) => {
             // const { host, shop } = req.query;
             // Set CSP header to allow iframe embedding
-            res.setHeader('Content-Security-Policy', `frame-src 'self' ${this.config.appUrl}; ` +
+            const frameSrc = this.config.proxy ? `'self'` : `'self' ${this.config.appUrl}`;
+            res.setHeader('Content-Security-Policy', `frame-src ${frameSrc}; ` +
                 `frame-ancestors 'self' localhost:*; ` +
                 `script-src 'self' 'unsafe-inline' 'unsafe-eval';`);
             // res.send(this.getAdminHTML(host as string, shop as string));
@@ -93,6 +95,7 @@ class MockShopifyAdminServer {
                 appUrl: this.config.appUrl,
                 appPath: this.config.appPath,
                 adminApi: this.config.adminApi,
+                proxy: this.config.proxy,
             });
         });
         // Session token endpoint
@@ -169,6 +172,22 @@ class MockShopifyAdminServer {
             const srcPath = path_1.default.join(__dirname, '../../app-bridge/dist/index.js');
             res.sendFile(srcPath);
         });
+        // Same-origin reverse proxy for Cypress compatibility
+        if (this.config.proxy) {
+            this.app.use('/__proxy', (0, http_proxy_middleware_1.createProxyMiddleware)({
+                target: this.config.appUrl,
+                changeOrigin: true,
+                ws: true,
+                pathRewrite: { '^/__proxy': '' },
+                on: {
+                    proxyReq: (proxyReq, req) => {
+                        if (this.config.debug) {
+                            console.log(`[MockShopify] Proxy: ${req.method} ${req.url} -> ${this.config.appUrl}${req.url}`);
+                        }
+                    },
+                },
+            }));
+        }
         // Catch-all for undefined routes
         this.app.use('*', (req, res) => {
             if (this.config.debug) {
@@ -374,7 +393,7 @@ class MockShopifyAdminServer {
 📍 URL: http://localhost:${this.config.port}
 🏪 Shop: ${this.config.shop}
 🔑 Client ID: ${this.config.clientId}
-🎯 App URL: ${this.config.appUrl}
+🎯 App URL: ${this.config.appUrl}${this.config.proxy ? '\n🔀 Proxy: /__proxy/ -> ' + this.config.appUrl : ''}
 ====================================
         `);
                 resolve();

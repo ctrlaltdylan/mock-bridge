@@ -9,6 +9,7 @@ interface Config {
   appUrl: string;
   appPath?: string;
   adminApi?: AdminApiConfig;
+  proxy?: boolean;
 }
 
 let cachedConfig: Config | null = null;

@@ -22,6 +22,7 @@ export interface MockShopifyAdminConfig {
     webhooks?: MockWebhook[];
     debug?: boolean;
     adminApi?: AdminApiConfig;
+    proxy?: boolean;
 }
 export interface MockWebhook {
     topic: string;

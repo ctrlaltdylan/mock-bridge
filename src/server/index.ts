@@ -2,6 +2,7 @@ import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import path from 'path';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import { TokenGenerator } from '../auth/token-generator';
 import { MockShopifyAdminConfig, MockShop, MockUser } from '../types';
 import { STANDARD_MOCK_CLIENT_ID, STANDARD_MOCK_SECRET } from '../auth/constants';
@@ -70,8 +71,9 @@ export class MockShopifyAdminServer {
       // const { host, shop } = req.query;
 
       // Set CSP header to allow iframe embedding
+      const frameSrc = this.config.proxy ? `'self'` : `'self' ${this.config.appUrl}`;
       res.setHeader('Content-Security-Policy',
-        `frame-src 'self' ${this.config.appUrl}; ` +
+        `frame-src ${frameSrc}; ` +
         `frame-ancestors 'self' localhost:*; ` +
         `script-src 'self' 'unsafe-inline' 'unsafe-eval';`
       );
@@ -114,6 +116,7 @@ export class MockShopifyAdminServer {
         appUrl: this.config.appUrl,
         appPath: this.config.appPath,
         adminApi: this.config.adminApi,
+        proxy: this.config.proxy,
       });
     });
 
@@ -204,6 +207,23 @@ export class MockShopifyAdminServer {
       const srcPath = path.join(__dirname, '../../app-bridge/dist/index.js');
       res.sendFile(srcPath);
     });
+
+    // Same-origin reverse proxy for Cypress compatibility
+    if (this.config.proxy) {
+      this.app.use('/__proxy', createProxyMiddleware({
+        target: this.config.appUrl,
+        changeOrigin: true,
+        ws: true,
+        pathRewrite: { '^/__proxy': '' },
+        on: {
+          proxyReq: (proxyReq, req) => {
+            if (this.config.debug) {
+              console.log(`[MockShopify] Proxy: ${req.method} ${req.url} -> ${this.config.appUrl}${req.url}`);
+            }
+          },
+        },
+      }));
+    }
 
     // Catch-all for undefined routes
     this.app.use('*', (req: Request, res: Response) => {
@@ -426,7 +446,7 @@ export class MockShopifyAdminServer {
 📍 URL: http://localhost:${this.config.port}
 🏪 Shop: ${this.config.shop}
 🔑 Client ID: ${this.config.clientId}
-🎯 App URL: ${this.config.appUrl}
+🎯 App URL: ${this.config.appUrl}${this.config.proxy ? '\n🔀 Proxy: /__proxy/ -> ' + this.config.appUrl : ''}
 ====================================
         `);
         resolve();
