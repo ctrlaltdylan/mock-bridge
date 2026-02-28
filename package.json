@@ -54,6 +54,11 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "files": [
+    "dist/",
+    "admin-frame/dist/",
+    "app-bridge/dist/"
+  ],
   "publishConfig": {
     "access": "public"
   }
