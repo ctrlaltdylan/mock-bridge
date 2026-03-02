@@ -37,19 +37,51 @@
 - ✅ Works offline and in CI/CD pipelines
 - ✅ Real database integration for comprehensive testing
 
-## 🗺️ Roadmap
+## 🗺️ API Support
 
 ### Core Features
-
-- ✅ iFrame embed
-- ✅ Session token issuance
+| Feature | Status | Notes |
+|---------|--------|-------|
+| iFrame embed | ✅ Supported | Full admin frame with Polaris styling |
+| Session tokens | ✅ Supported | `shopify.idToken()` |
+| Mock environment detection | ✅ Supported | Auto-loads mock App Bridge |
 
 ### App Bridge APIs
+| API | Status | Notes |
+|-----|--------|-------|
+| `shopify.modal` | ✅ Supported | `show()`, `hide()`, `toggle()` |
+| `shopify.saveBar` | ✅ Supported | `show()`, `hide()`, `toggle()` |
+| `shopify.loading` | ✅ Supported | `loading(boolean)` |
+| `shopify.toast` | ✅ Supported | `show(message, options)` |
+| `shopify.idToken` | ✅ Supported | Returns valid JWT |
+| `shopify.config` | ✅ Supported | `apiKey`, `shop`, `locale` |
+| `shopify.environment` | ✅ Supported | `embedded`, `mobile`, `pos` |
+| `shopify.user` | ✅ Supported | Returns mock user object |
+| `shopify.scopes` | 🔶 Stub | Returns mock data |
+| `shopify.resourcePicker` | 🔶 Stub | Returns empty array |
+| `shopify.picker` | 🔶 Stub | Returns empty selection |
+| `shopify.scanner` | 🔶 Stub | Returns mock scan data |
+| `shopify.pos` | 🔶 Stub | Cart API with mock data |
+| `shopify.intents` | 🔶 Stub | `invoke()`, `register()` |
+| `shopify.webVitals` | 🔶 Stub | Callback registration only |
+| `shopify.support` | 🔶 Stub | Callback registration only |
+| `shopify.reviews` | 🔶 Stub | Returns success |
+| `shopify.app` | 🔶 Stub | Returns empty extensions |
+| Authenticated fetch | ✅ Supported | Mock, proxy, or direct modes |
+| Navigation | ❌ Not implemented | |
+| Print | ❌ Not implemented | |
+| Share | ❌ Not implemented | |
 
-- [ ] Direct admin API fetch overrides
-- [ ] Toast implementation
-- [ ] Resource picker
-- [ ] Dynamic scopes
+### Web Components
+| Component | Status | Notes |
+|-----------|--------|-------|
+| `<ui-modal>` | ✅ Supported | With `<ui-title-bar>` support |
+| `<ui-save-bar>` | ✅ Supported | With `data-save-bar` form integration |
+| `<ui-nav-menu>` | ✅ Supported | Displays in admin sidebar |
+| `<ui-title-bar>` | ✅ Supported | Inside modals |
+| `<s-app-window>` | ❌ Not implemented | |
+
+**Legend:** ✅ Supported | 🔶 Stub (returns mock data) | ❌ Not implemented
 
 ## 📦 Installation
 
@@ -532,7 +564,66 @@ const server = new MockShopifyAdminServer({
     "write_orders",
   ],
   debug: true, // Enable debug logging
+
+  // Admin API handling (see below)
+  adminApi: "mock",
 });
+```
+
+### Admin API Configuration
+
+Control how `fetch('/admin/api/...')` requests are handled:
+
+```javascript
+// mock.config.js
+
+// Option 1: Mock data (default) - returns fake data, works offline
+module.exports = {
+  adminApi: "mock",
+};
+
+// Option 2: Proxy through your app - for real data via your backend
+module.exports = {
+  adminApi: {
+    proxy: "http://localhost:3000/api/shopify-proxy",
+  },
+};
+
+// Option 3: Direct to Shopify - requires access token from installed shop
+module.exports = {
+  adminApi: {
+    accessToken: process.env.SHOPIFY_ACCESS_TOKEN,
+  },
+};
+```
+
+**When to use each mode:**
+
+| Mode | Use Case |
+|------|----------|
+| `'mock'` | Offline testing, CI/CD, no Shopify credentials needed |
+| `{ proxy: '...' }` | Real data testing via your app's backend proxy |
+| `{ accessToken: '...' }` | Direct Shopify API access (requires installed shop) |
+
+**Proxy endpoint example** (if using proxy mode):
+
+```typescript
+// pages/api/shopify-proxy.ts (Next.js example)
+export default async function handler(req, res) {
+  const { url, method, body } = req.body;
+  const shop = await getShopFromSession(req);
+
+  const response = await fetch(`https://${shop.domain}${url}`, {
+    method,
+    headers: {
+      "X-Shopify-Access-Token": shop.accessToken,
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  res.json(await response.json());
+}
 ```
 
 ### Authentication Options

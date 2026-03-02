@@ -1,3 +1,14 @@
+/**
+ * Configuration for how Admin API requests are handled
+ * - 'mock': Return mock data from the mock server (default, works offline)
+ * - { proxy: string }: Forward requests to an app-provided proxy endpoint
+ * - { accessToken: string }: Make direct requests to Shopify with the provided token
+ */
+export type AdminApiConfig =
+  | 'mock'
+  | { proxy: string }
+  | { accessToken: string };
+
 export interface MockShopifyAdminConfig {
   port?: number;
   appUrl: string;
@@ -10,6 +21,8 @@ export interface MockShopifyAdminConfig {
   scopes?: string[];
   webhooks?: MockWebhook[];
   debug?: boolean;
+  adminApi?: AdminApiConfig;  // How to handle Admin API requests (default: 'mock')
+  proxy?: boolean;  // Reverse-proxy the app through mock-bridge for same-origin iframe (Cypress support)
 }
 
 export interface MockWebhook {

@@ -132,7 +132,9 @@ export function useMockBridge() {
     const host = btoa(config.shop);
     const idToken = sessionToken;
 
-    return `${config.appUrl}${basePath}?host=${host}&shop=${config.shop}&embedded=1&id_token=${idToken}`;
+    const origin = config.proxy ? '/__proxy' : config.appUrl;
+
+    return `${origin}${basePath}?host=${host}&shop=${config.shop}&embedded=1&id_token=${idToken}`;
   })();
 
   return {

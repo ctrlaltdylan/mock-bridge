@@ -169,6 +169,7 @@ async function startCommand(options: CLIConfig): Promise<void> {
       ...(options.shop && { shop: options.shop }),
       ...(options.port && { port: options.port }),
       ...(options.debug && { debug: options.debug }),
+      ...(options.proxy && { proxy: options.proxy }),
     } as MockShopifyAdminConfig;
 
     // Validate configuration
@@ -203,6 +204,13 @@ async function startCommand(options: CLIConfig): Promise<void> {
     console.log(chalk.gray('   ✅ Mock App Bridge APIs'));
     console.log(chalk.gray('   ✅ Playwright/automation support'));
     console.log(chalk.gray('   ✅ Chrome DevTools MCP compatibility'));
+    if (finalConfig.proxy) {
+      console.log(chalk.gray('   ✅ Same-origin proxy mode (Cypress compatible)'));
+      console.log();
+      console.log(chalk.white.bold('🔀 Proxy Mode:'));
+      console.log(chalk.gray('   App is proxied at'), chalk.green(`http://localhost:${finalConfig.port}/__proxy/`));
+      console.log(chalk.gray('   Iframe is same-origin — Cypress can access it directly'));
+    }
     console.log();
     console.log(chalk.gray('Press Ctrl+C to stop the server'));
 
@@ -251,16 +259,16 @@ async function initCommand(): Promise<void> {
 module.exports = {
   // Your app configuration
   appUrl: 'http://localhost:3000/shopify', // Your app's URL (include path if needed)
-  
+
   // Shopify app credentials
   clientId: process.env.SHOPIFY_API_KEY || '${STANDARD_MOCK_CLIENT_ID}',  // Your Shopify app's client ID (optional)
   clientSecret: '${STANDARD_MOCK_SECRET}', // Standard mock secret for development only
-  
+
   // Mock environment settings
   port: 3080,                             // Mock admin port
   shop: 'test-shop.myshopify.com',       // Mock shop domain
   apiVersion: '2024-01',                  // Shopify API version
-  
+
   // App permissions/scopes
   scopes: [
     'read_products',
@@ -272,7 +280,14 @@ module.exports = {
     'read_draft_orders',
     'write_draft_orders'
   ],
-  
+
+  // Admin API handling - how fetch('/admin/api/...') requests are processed
+  // Options:
+  //   'mock' - Return mock data (default, works offline)
+  //   { proxy: 'http://localhost:3000/api/shopify-proxy' } - Forward to your app's proxy
+  //   { accessToken: process.env.SHOPIFY_ACCESS_TOKEN } - Direct to Shopify (requires token)
+  adminApi: 'mock',
+
   // Development options
   debug: true,                            // Enable debug logging
 };
@@ -319,6 +334,7 @@ program
   .option('--port <number>', 'Mock admin port', (val) => parseInt(val, 10), 3080)
   .option('-c, --config <file>', 'Path to configuration file')
   .option('-d, --debug', 'Enable debug logging', false)
+  .option('--proxy', 'Proxy app through mock-bridge for same-origin iframe (enables Cypress support)', false)
   .action(async (appUrl: string | undefined, options: CLIConfig) => {
     // If app-url is provided as argument, use it
     if (appUrl) {
@@ -338,6 +354,7 @@ program
   .option('--port <number>', 'Mock admin port', (val) => parseInt(val, 10), 3080)
   .option('-c, --config <file>', 'Path to configuration file')
   .option('-d, --debug', 'Enable debug logging', false)
+  .option('--proxy', 'Proxy app through mock-bridge for same-origin iframe (enables Cypress support)', false)
   .action(async (appUrl: string | undefined, options: CLIConfig) => {
     if (appUrl) {
       options.appUrl = appUrl;
