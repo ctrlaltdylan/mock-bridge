@@ -58,7 +58,7 @@
 | `shopify.environment` | ✅ Supported | `embedded`, `mobile`, `pos` |
 | `shopify.user` | ✅ Supported | Returns mock user object |
 | `shopify.scopes` | 🔶 Stub | Returns mock data |
-| `shopify.resourcePicker` | 🔶 Stub | Returns empty array |
+| `shopify.resourcePicker` | ✅ Mock UI | Opens a mock admin modal; catalog from [`/api/resource-picker-catalog`](docs/RESOURCE_PICKER.md) (customizable via `resourcePickerCatalog` on the server) |
 | `shopify.picker` | 🔶 Stub | Returns empty selection |
 | `shopify.scanner` | 🔶 Stub | Returns mock scan data |
 | `shopify.pos` | 🔶 Stub | Cart API with mock data |
@@ -84,6 +84,10 @@
 **Legend:** ✅ Supported | 🔶 Stub (returns mock data) | ❌ Not implemented
 
 ## 📦 Installation
+
+> **Node.js requirements**
+> - **Using the package:** Node.js **18+**. The published package ships prebuilt, so you never run the build toolchain.
+> - **Building from source:** Node.js **^20.19.0 || >=22.12.0**, required by Vite 7 (the admin frame's bundler). This also applies when installing from a git ref, since `prepare` runs the full build. CI builds and publishes on Node 22.
 
 ```bash
 npm install @getverdict/mock-bridge --save-dev
@@ -307,6 +311,7 @@ export async function authenticate(token: string) {
 
 #### Framework-Specific Examples
 
+**Shopify App React Router** (`authenticate.admin(request)`): see the dedicated guide **[docs/SHOPIFY_APP_REACT_ROUTER.md](./docs/SHOPIFY_APP_REACT_ROUTER.md)**.
 **Next.js API Routes:**
 
 ```typescript
@@ -564,6 +569,11 @@ const server = new MockShopifyAdminServer({
     "write_orders",
   ],
   debug: true, // Enable debug logging
+
+  // Session token lifetime in seconds (default 60, matching real Shopify).
+  // Raise it for E2E runs — a test that outlives the token starts sending requests
+  // the app rejects, which looks like an unexplained mid-test redirect.
+  sessionTokenTtlSeconds: 3600,
 
   // Admin API handling (see below)
   adminApi: "mock",

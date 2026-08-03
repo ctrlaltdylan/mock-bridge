@@ -11,6 +11,7 @@ const path_1 = __importDefault(require("path"));
 const http_proxy_middleware_1 = require("http-proxy-middleware");
 const token_generator_1 = require("../auth/token-generator");
 const constants_1 = require("../auth/constants");
+const mock_resource_picker_catalog_1 = require("../mock-resource-picker-catalog");
 class MockShopifyAdminServer {
     constructor(config) {
         this.config = {
@@ -41,6 +42,7 @@ class MockShopifyAdminServer {
             lastName: 'User',
             displayName: 'Test User',
         };
+        this.resourcePickerCatalog = (0, mock_resource_picker_catalog_1.mergeResourcePickerCatalog)((0, mock_resource_picker_catalog_1.getDefaultResourcePickerCatalog)(), this.config.resourcePickerCatalog ?? null);
         this.setupMiddleware();
         this.setupRoutes();
     }
@@ -96,6 +98,23 @@ class MockShopifyAdminServer {
                 appPath: this.config.appPath,
                 adminApi: this.config.adminApi,
                 proxy: this.config.proxy,
+                sessionTokenTtlSeconds: this.config.sessionTokenTtlSeconds,
+            });
+        });
+        // Mock resource picker catalog (admin-frame UI)
+        this.app.get('/api/resource-picker-catalog', (req, res) => {
+            const q = String(req.query.q ?? '')
+                .trim()
+                .toLowerCase();
+            const { products, variants, collections } = this.resourcePickerCatalog;
+            const match = (s) => !q || s.toLowerCase().includes(q);
+            res.json({
+                products: products.filter((p) => match(p.title) || match(p.handle) || match(p.id)),
+                variants: variants.filter((v) => match(v.displayName) ||
+                    match(v.title) ||
+                    match(v.id) ||
+                    (v.sku ? match(v.sku) : false)),
+                collections: collections.filter((c) => match(c.title) || match(c.handle) || match(c.id)),
             });
         });
         // Session token endpoint
@@ -105,6 +124,7 @@ class MockShopifyAdminServer {
                 clientId: this.config.clientId,
                 clientSecret: this.config.clientSecret,
                 userId: this.mockUser.id,
+                expiresInSeconds: this.config.sessionTokenTtlSeconds,
             });
             res.json({ token });
         });

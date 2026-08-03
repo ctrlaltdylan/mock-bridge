@@ -34,3 +34,10 @@ export {
   type SessionTokenPayload,
   type TokenGeneratorOptions
 } from '../auth/token-generator';
+
+export {
+  withMockBridgeAdminAuthForReactRouter,
+  type MockBridgeAuthReflectConfig
+} from './withMockBridgeAdminAuthForReactRouter';
+
+export type { MockBridgeAuthReflectConfig as MockBridgeReactRouterAuthConfig } from './withMockBridgeAdminAuthForReactRouter';

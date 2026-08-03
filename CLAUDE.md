@@ -3,6 +3,9 @@
 Shopify embedded app testing solution - test locally without real credentials.
 
 ## Quick Start
+Requires Node.js `^20.19.0 || >=22.12.0` to build (Vite 7, used by admin-frame). The
+published package itself runs on Node 18+, which is what `engines.node` declares.
+
 - `npm install` - Install dependencies
 - `npm run build` - Build TypeScript
 - `npx ts-node src/cli/index.ts <app-url>` - Run dev server

@@ -21,6 +21,10 @@ import { picker } from "./features/picker";
 import { app } from "./features/app";
 import { loading } from "./features/loading";
 import { navMenu } from "./features/nav-menu";
+import {
+  bridgePayloadFromLegacyResourcePickerOptions,
+  openMockResourcePickerFromBridge,
+} from "./resource-picker-bridge";
 
 (function (window) {
   'use strict';
@@ -115,25 +119,39 @@ import { navMenu } from "./features/nav-menu";
         Collection: 'collection',
       },
       create: function (app: any, options: any) {
-        const subscribers = new Map();
+        const subscribers = new Map<
+          number,
+          { action: string; handler: (p: unknown) => void }
+        >();
+        const notifySubscribers = (action: string, payload: unknown) => {
+          subscribers.forEach((callback) => {
+            if (callback.action === action) {
+              callback.handler(payload);
+            }
+          });
+        };
         return {
           dispatch: function (action: any) {
             if (action === Actions.ResourcePicker.Action.OPEN) {
-              // Mock selection after a delay
-              setTimeout(() => {
-                const mockSelection = {
-                  selection: [{
-                    id: 'gid://shopify/Product/123456',
-                    title: 'Mock Product',
-                    handle: 'mock-product',
-                  }],
-                };
-                subscribers.forEach(callback => {
-                  if (callback.action === Actions.ResourcePicker.Action.SELECT) {
-                    callback.handler(mockSelection);
+              void openMockResourcePickerFromBridge(
+                bridgePayloadFromLegacyResourcePickerOptions({
+                  type: options?.type,
+                  multiple: options?.multiple,
+                  selectionIds: options?.selectionIds,
+                }),
+              )
+                .then((result) => {
+                  if (result.cancelled) {
+                    notifySubscribers(Actions.ResourcePicker.Action.CANCEL, {});
+                  } else {
+                    notifySubscribers(Actions.ResourcePicker.Action.SELECT, {
+                      selection: result.selection,
+                    });
                   }
+                })
+                .catch(() => {
+                  notifySubscribers(Actions.ResourcePicker.Action.CANCEL, {});
                 });
-              }, 100);
             }
           },
           subscribe: function (action: any, handler: any) {
@@ -202,6 +220,49 @@ import { navMenu } from "./features/nav-menu";
           source: 'app',
         }, '*');
       });
+    },
+
+    /**
+     * Adopt the `id_token` the host put in the iframe URL.
+     *
+     * `getSessionToken` only fills `currentSessionToken` once the app asks for a token, but the
+     * patched `window.fetch` below needs one from the very first request. An app that never calls
+     * `shopify.idToken()` (most apps — the real App Bridge hands them an authenticated `fetch`)
+     * would otherwise send every data request unauthenticated, and the host would bounce it to
+     * the session-token page instead of returning data.
+     */
+    seedSessionTokenFromUrl: function (): string | null {
+      try {
+        const fromUrl = new URLSearchParams(window.location.search).get('id_token');
+        if (fromUrl && !currentSessionToken) {
+          currentSessionToken = fromUrl;
+          console.log('[MockAppBridge] Seeded session token from id_token URL param');
+        }
+      } catch (e) {
+        console.warn('[MockAppBridge] Could not read id_token from URL:', (e as Error).message);
+      }
+      return currentSessionToken;
+    },
+
+    /**
+     * Keep a live token in hand. Mock tokens are short-lived by design (see
+     * `sessionTokenTtlSeconds`), and a stale one fails validation exactly like no token at all.
+     */
+    startSessionTokenRefresh: function (ttlSeconds?: number): void {
+      if (tokenRefreshInterval) return;
+      // Not embedded: postMessage would go to ourselves and never be answered.
+      if (window.parent === window) return;
+
+      const ttlMs = (ttlSeconds && ttlSeconds > 0 ? ttlSeconds : 60) * 1000;
+      const intervalMs = Math.max(5_000, Math.min(30_000, Math.floor(ttlMs / 2)));
+
+      tokenRefreshInterval = window.setInterval(async () => {
+        try {
+          await utilities.getSessionToken(null);
+        } catch (error) {
+          console.error('[MockAppBridge] Token refresh failed:', error);
+        }
+      }, intervalMs);
     },
 
     authenticatedFetch: function (app: any, fetch: any) {
@@ -302,15 +363,7 @@ import { navMenu } from "./features/nav-menu";
     appInstances.set(config.apiKey, app);
 
     // Start token refresh
-    if (!tokenRefreshInterval) {
-      tokenRefreshInterval = window.setInterval(async () => {
-        try {
-          await utilities.getSessionToken(app);
-        } catch (error) {
-          console.error('[MockAppBridge] Token refresh failed:', error);
-        }
-      }, 50000); // Refresh every 50 seconds
-    }
+    utilities.startSessionTokenRefresh();
 
     return app;
   }
@@ -420,7 +473,7 @@ import { navMenu } from "./features/nav-menu";
   const detectMockServerUrl = (): string => {
     // Try to get from current script src
     const scripts = document.querySelectorAll('script[src*="app-bridge.js"]');
-    for (const script of scripts) {
+    for (const script of Array.from(scripts)) {
       const src = (script as HTMLScriptElement).src;
       if (src) {
         const url = new URL(src);
@@ -441,6 +494,10 @@ import { navMenu } from "./features/nav-menu";
 
   mockServerUrl = detectMockServerUrl();
 
+  // Adopt the host's token before anything can issue a request (see seedSessionTokenFromUrl).
+  utilities.seedSessionTokenFromUrl();
+  utilities.startSessionTokenRefresh();
+
   // Fetch admin API config from server
   const fetchAdminApiConfig = async (): Promise<void> => {
     try {
@@ -449,6 +506,14 @@ import { navMenu } from "./features/nav-menu";
       if (config.adminApi) {
         adminApiConfig = config.adminApi;
         console.log('[MockAppBridge] Admin API config:', adminApiConfig);
+      }
+      // Re-arm on the real TTL: the default assumes 60s, and a shorter one needs a tighter loop.
+      if (config.sessionTokenTtlSeconds) {
+        if (tokenRefreshInterval) {
+          window.clearInterval(tokenRefreshInterval);
+          tokenRefreshInterval = null;
+        }
+        utilities.startSessionTokenRefresh(config.sessionTokenTtlSeconds);
       }
     } catch (error) {
       console.warn('[MockAppBridge] Could not fetch admin API config, using default (mock)');

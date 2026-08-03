@@ -6,6 +6,11 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import { TokenGenerator } from '../auth/token-generator';
 import { MockShopifyAdminConfig, MockShop, MockUser } from '../types';
 import { STANDARD_MOCK_CLIENT_ID, STANDARD_MOCK_SECRET } from '../auth/constants';
+import {
+  getDefaultResourcePickerCatalog,
+  mergeResourcePickerCatalog,
+  type ResourcePickerCatalogResponse,
+} from '../mock-resource-picker-catalog';
 
 export class MockShopifyAdminServer {
   private app: Express;
@@ -14,6 +19,7 @@ export class MockShopifyAdminServer {
   private server: any;
   private mockShop: MockShop;
   private mockUser: MockUser;
+  private resourcePickerCatalog: ResourcePickerCatalogResponse;
 
   constructor(config: MockShopifyAdminConfig) {
     this.config = {
@@ -47,6 +53,11 @@ export class MockShopifyAdminServer {
       lastName: 'User',
       displayName: 'Test User',
     };
+
+    this.resourcePickerCatalog = mergeResourcePickerCatalog(
+      getDefaultResourcePickerCatalog(),
+      this.config.resourcePickerCatalog ?? null,
+    );
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -117,6 +128,33 @@ export class MockShopifyAdminServer {
         appPath: this.config.appPath,
         adminApi: this.config.adminApi,
         proxy: this.config.proxy,
+        sessionTokenTtlSeconds: this.config.sessionTokenTtlSeconds,
+      });
+    });
+
+    // Mock resource picker catalog (admin-frame UI)
+    this.app.get('/api/resource-picker-catalog', (req: Request, res: Response) => {
+      const q = String(req.query.q ?? '')
+        .trim()
+        .toLowerCase();
+      const { products, variants, collections } = this.resourcePickerCatalog;
+
+      const match = (s: string) => !q || s.toLowerCase().includes(q);
+
+      res.json({
+        products: products.filter(
+          (p) => match(p.title) || match(p.handle) || match(p.id),
+        ),
+        variants: variants.filter(
+          (v) =>
+            match(v.displayName) ||
+            match(v.title) ||
+            match(v.id) ||
+            (v.sku ? match(v.sku) : false),
+        ),
+        collections: collections.filter(
+          (c) => match(c.title) || match(c.handle) || match(c.id),
+        ),
       });
     });
 
@@ -127,6 +165,7 @@ export class MockShopifyAdminServer {
         clientId: this.config.clientId!,
         clientSecret: this.config.clientSecret!,
         userId: this.mockUser.id,
+        expiresInSeconds: this.config.sessionTokenTtlSeconds,
       });
 
       res.json({ token });

@@ -10,7 +10,11 @@ export const features = {
   navMenu: useNavMenuFeatureStore,
 }
 
-export type FeatureName = keyof typeof features;
+type FeaturesMap = typeof features;
+
+/** Registered iframe-invokable features (see useMockBridge). */
+export type FeatureName = keyof FeaturesMap;
+
 export type FeatureStore<F extends FeatureName> = ReturnType<typeof features[F]['getState']>;
 export type FeatureActions<F extends FeatureName> = {
   [K in keyof FeatureStore<F> as FeatureStore<F>[K] extends (...args: any[]) => any ? K : never]: FeatureStore<F>[K];
@@ -22,6 +26,5 @@ export function getFeatureStore<F extends FeatureName>(name: F) {
   if (!features[name]) {
     throw new Error(`Feature ${name} not found/supported`);
   }
-
   return features[name];
 }

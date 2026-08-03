@@ -2,17 +2,13 @@
 
 Follow this guide if you're using the Shopify app remix template.
 
-## Set app bridge path
+## Set App Bridge script URL
 
-You likely have the `<AppProvider>` component rendered in your `app.tsx`. Set the `__APP_BRIDGE_URL` prop:
+Passing `__APP_BRIDGE_URL` (or any extra prop) into Shopify’s **Remix** or **React Router** `AppProvider` does **not** change which script loads: those providers render a `<script>` with a fixed CDN `src`. You must either override that script in your own provider or use the mock-bridge React helper.
 
-```tsx
-<AppProvider isEmbeddedApp apiKey={apiKey} __APP_BRIDGE_URL="http://localhost:3080/app-bridge.js">
-  {/* ... */}
-</AppProvider>
-```
+For **`@shopify/shopify-app-react-router`**, replace `AppProvider` with `MockBridgeAppProvider` from `@getverdict/mock-bridge/react` and pass **`appBridgeUrl`** (same origin as `MockShopifyAdminServer`, usually `http://localhost:3080/app-bridge.js`). See [Shopify App React Router](./SHOPIFY_APP_REACT_ROUTER.md#app-bridge-script-mock).
 
-The port you choose to run `@getverdict/mock-bridge` might be different than `3080` so keep that in mind.
+For classic **Remix** templates, point your embedded route at the same URL (custom `AppProvider` / root script) so the iframe loads `app-bridge.js` from the mock server instead of the Shopify CDN.
 
 ## Set CSP headers
 

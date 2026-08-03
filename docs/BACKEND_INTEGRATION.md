@@ -2,6 +2,10 @@
 
 This guide explains how to integrate mock session token support into any Shopify app backend. The authentication utilities provided by this package allow your backend to seamlessly handle both real Shopify tokens and mock tokens for testing, with minimal code changes.
 
+## Shopify App React Router
+
+If you use `@shopify/shopify-app-react-router`, authentication is exposed as **`shopify.authenticate.admin(request)`** (and other `authenticate.*` methods), not as a `(token: string) => …` function. The **`withMockTokenSupport`** helper in this package only wraps **token-string** APIs; it does not replace or wrap `authenticate.admin`. For Mock Bridge in React Router apps, use **`withMockBridgeAdminAuthForReactRouter`** from `@getverdict/mock-bridge/auth` and follow **[Shopify App React Router](./SHOPIFY_APP_REACT_ROUTER.md)**.
+
 ## Table of Contents
 
 - [Quick Start](#quick-start)
@@ -455,7 +459,7 @@ Generate mock user objects for testing.
 
 ### withMockTokenSupport(authFunction, shopifySecret, options?)
 
-Wrapper that adds mock token support to existing auth functions.
+Wrapper that adds mock token support to existing auth functions. This is only applicable when your API is a **`(token: string) => …`** handler. It does **not** apply to `@shopify/shopify-app-react-router`’s **`authenticate.admin(request)`**; use **`withMockBridgeAdminAuthForReactRouter`** ([Shopify App React Router](./SHOPIFY_APP_REACT_ROUTER.md)) instead.
 
 **Parameters:**
 - `authFunction: (token: string) => T | Promise<T>` - Existing auth function
