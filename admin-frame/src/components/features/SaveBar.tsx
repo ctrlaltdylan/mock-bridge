@@ -1,8 +1,9 @@
-import { useSaveBarFeatureStore } from "../../store/features/save-bar";
+import { useStore } from "zustand";
+import { stores } from "../../store/features";
 
 export function SaveBar() {
-  const saveBars = useSaveBarFeatureStore(state => state.saveBars);
-  const hide = useSaveBarFeatureStore(state => state.hide);
+  const saveBars = useStore(stores.saveBar, state => state.saveBars);
+  const hide = useStore(stores.saveBar, state => state.hide);
 
   // Get all visible save bars
   const visibleSaveBars = Object.values(saveBars).filter(sb => sb.visible);

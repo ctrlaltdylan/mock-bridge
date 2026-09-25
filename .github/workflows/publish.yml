@@ -32,9 +32,6 @@ jobs:
       - name: Install admin-frame dependencies
         run: cd admin-frame && npm ci --legacy-peer-deps
 
-      - name: Install app-bridge dependencies
-        run: cd app-bridge && npm ci
-
       - name: Build
         run: npm run build
 

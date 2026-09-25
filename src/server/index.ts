@@ -25,7 +25,8 @@ export class MockShopifyAdminServer {
       scopes: ['read_products', 'write_products', 'read_orders', 'write_orders'],
       debug: false,
       adminApi: 'mock',
-      ...config,
+      // Options passed as undefined keep their defaults.
+      ...Object.fromEntries(Object.entries(config).filter(([, value]) => value !== undefined)) as MockShopifyAdminConfig,
     };
 
     this.app = express();
@@ -438,9 +439,9 @@ export class MockShopifyAdminServer {
   }
 
   public async start(): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       this.server = this.app.listen(this.config.port, () => {
-        console.log(`
+        if (!this.config.quiet) console.log(`
 🚀 Mock Shopify Admin Server Started!
 ====================================
 📍 URL: http://localhost:${this.config.port}
@@ -451,6 +452,8 @@ export class MockShopifyAdminServer {
         `);
         resolve();
       });
+      // e.g. EADDRINUSE; without this the error is unhandled.
+      this.server.once('error', reject);
     });
   }
 

@@ -1,7 +1,8 @@
-import { useLoadingFeatureStore } from "../../store/features/loading";
+import { useStore } from "zustand";
+import { stores } from "../../store/features";
 
 export function Loading() {
-  const isLoading = useLoadingFeatureStore(state => state.isLoading);
+  const isLoading = useStore(stores.loading, state => state.isLoading);
 
   if (!isLoading) return null;
 

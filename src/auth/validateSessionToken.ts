@@ -1,5 +1,4 @@
-import jwt from 'jsonwebtoken';
-import { SessionTokenPayload } from '../auth/token-generator';
+import { verifyJwt, type SessionTokenPayload } from './jwt';
 
 export interface AuthResult {
   /** Whether this is a mock token */
@@ -75,9 +74,7 @@ export async function validateSessionToken(
   // Try each secret until one works
   for (const { secret, isMock } of secretsToTry) {
     try {
-      const decoded = jwt.verify(token, secret, {
-        algorithms: ['HS256']
-      }) as SessionTokenPayload;
+      const decoded = await verifyJwt<SessionTokenPayload>(token, secret);
 
       // Validate token structure
       if (!decoded.dest || !decoded.sub) {

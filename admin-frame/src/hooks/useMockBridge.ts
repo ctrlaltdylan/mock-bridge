@@ -1,16 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useConfig } from "./useConfig";
-import { getFeatureStore, type FeatureActionName, type FeatureActionPayload, type FeatureName } from "../store/features";
-
-export type FeatureActionRequest<
-  F extends FeatureName = FeatureName,
-  A extends FeatureActionName<F> = FeatureActionName<F>,
-  P extends FeatureActionPayload<F, A> = FeatureActionPayload<F, A>
-> = {
-  feature: F;
-  action: A | FeatureActionName<F>;
-  payload: P | FeatureActionPayload<F, A>;
-}
+import type { FeatureActionRequestMessage, FeatureActionResponseMessage } from "../../../src/core/protocol";
+import { runFeatureAction } from "../../../src/core/stores";
+import { stores } from "../store/features";
 
 export function useMockBridge() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -84,22 +76,19 @@ export function useMockBridge() {
         // Embedded app called something, like shopify.modal.show('modal_id')
         // Proxy the calls to their corresponding feature store
         if (event.data.type === 'FEATURE_ACTION_REQUEST') {
-          const { feature, action, payload } = event.data as FeatureActionRequest;
+          const { action_id, feature, action, payload } = event.data as FeatureActionRequestMessage;
 
-          const featureStore = getFeatureStore(feature);
-          const state = featureStore.getState() as Record<string, unknown>;
-          const actionFn = state[action as string];
-
-          if (typeof actionFn === 'function') {
-            (actionFn as (payload: unknown) => void)(payload);
-          } else {
-            console.warn('[MockAdmin] Unknown feature action:', action);
+          const { handled, result } = runFeatureAction(stores, feature, action, payload);
+          if (!handled) {
+            console.warn('[MockAdmin] Unknown feature action:', feature, action);
           }
 
-          iframeRef.current?.contentWindow?.postMessage({
+          const response: FeatureActionResponseMessage = {
             type: 'FEATURE_ACTION_RESPONSE',
-            action_id: event.data.action_id,
-          }, '*');
+            action_id,
+            payload: result,
+          };
+          iframeRef.current?.contentWindow?.postMessage(response, '*');
         }
       }
     }
