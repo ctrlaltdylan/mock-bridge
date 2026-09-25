@@ -4,4 +4,6 @@ export { STANDARD_MOCK_SECRET, STANDARD_MOCK_SHOP, STANDARD_MOCK_USER_ID } from 
 export { createMockUser, createMockShopifyUser, type MockCurrentUser, type MockUserOptions } from './createMockUser';
 export { withMockTokenSupport, withMockTokenMiddleware, type MockTokenHandlerOptions } from './withMockTokenSupport';
 export { type SessionTokenPayload, type TokenGeneratorOptions } from '../auth/token-generator';
+export { withMockBridgeAdminAuthForReactRouter, type MockBridgeAuthReflectConfig } from './withMockBridgeAdminAuthForReactRouter';
+export type { MockBridgeAuthReflectConfig as MockBridgeReactRouterAuthConfig } from './withMockBridgeAdminAuthForReactRouter';
 //# sourceMappingURL=index.d.ts.map

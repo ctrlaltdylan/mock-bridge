@@ -16,7 +16,8 @@ exports.getMockServerUrl = getMockServerUrl;
  * @returns Promise that resolves when App Bridge is loaded
  */
 function setupAppBridge(config = {}) {
-    const { timeout = 200, debug = false, onMockDetected, onShopifyDetected } = config;
+    // Short default so mock detection fails fast; increase timeout if your iframe or bundles load slowly.
+    const { timeout = 2000, debug = false, onMockDetected, onShopifyDetected } = config;
     return new Promise((resolve, reject) => {
         let isResolved = false;
         let isMockEnvironment = false;

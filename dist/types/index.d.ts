@@ -1,3 +1,4 @@
+import type { ResourcePickerCatalogResponse } from '../mock-resource-picker-catalog';
 /**
  * Configuration for how Admin API requests are handled
  * - 'mock': Return mock data from the mock server (default, works offline)
@@ -20,9 +21,17 @@ export interface MockShopifyAdminConfig {
     apiVersion?: string;
     scopes?: string[];
     webhooks?: MockWebhook[];
+    /**
+     * Lifetime of minted session tokens, in seconds (default 60, matching real Shopify).
+     * Raise it for E2E runs: a test that outlives the token starts sending requests the
+     * app rejects, which surfaces as an unexplained mid-test redirect to the bounce page.
+     */
+    sessionTokenTtlSeconds?: number;
     debug?: boolean;
     adminApi?: AdminApiConfig;
     proxy?: boolean;
+    /** Optional override for mock resource picker catalog (merged with defaults). */
+    resourcePickerCatalog?: Partial<ResourcePickerCatalogResponse>;
 }
 export interface MockWebhook {
     topic: string;

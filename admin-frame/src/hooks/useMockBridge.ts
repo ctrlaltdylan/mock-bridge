@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useConfig } from "./useConfig";
 import { getFeatureStore, type FeatureActionName, type FeatureActionPayload, type FeatureName } from "../store/features";
+import { useResourcePickerFeatureStore } from "../store/features/resource-picker";
+import type { ResourcePickerOpenOptions } from "../types/resource-picker";
 
 export type FeatureActionRequest<
   F extends FeatureName = FeatureName,
@@ -12,8 +14,17 @@ export type FeatureActionRequest<
   payload: P | FeatureActionPayload<F, A>;
 }
 
+/** Includes special-case features handled in useMockBridge (e.g. resourcePicker). */
+export type HostFeatureActionMessage = FeatureActionRequest | {
+  feature: 'resourcePicker';
+  action: 'open';
+  payload: ResourcePickerOpenOptions;
+}
+
 export function useMockBridge() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const mockSignalTimeoutsRef = useRef<number[]>([]);
+  const mockSignalIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const config = useConfig();
 
   const [sessionToken, setSessionToken] = useState<string>('');
@@ -37,6 +48,35 @@ export function useMockBridge() {
       console.warn('[MockAdmin] Could not signal mock environment:', (e as Error).message);
     }
   }, [config]);
+
+  const clearMockSignalSchedule = useCallback(() => {
+    for (const id of mockSignalTimeoutsRef.current) {
+      window.clearTimeout(id);
+    }
+    mockSignalTimeoutsRef.current = [];
+    if (mockSignalIntervalRef.current != null) {
+      window.clearInterval(mockSignalIntervalRef.current);
+      mockSignalIntervalRef.current = null;
+    }
+  }, []);
+
+  const scheduleMockEnvironmentSignals = useCallback(() => {
+    clearMockSignalSchedule();
+    sendMockSignal();
+    const delays = [10, 50, 100, 250, 500, 1000, 2000, 4000, 6000];
+    for (const d of delays) {
+      mockSignalTimeoutsRef.current.push(window.setTimeout(sendMockSignal, d));
+    }
+    mockSignalIntervalRef.current = window.setInterval(sendMockSignal, 400);
+    mockSignalTimeoutsRef.current.push(
+      window.setTimeout(() => {
+        if (mockSignalIntervalRef.current != null) {
+          window.clearInterval(mockSignalIntervalRef.current);
+          mockSignalIntervalRef.current = null;
+        }
+      }, 12_000),
+    );
+  }, [clearMockSignalSchedule, sendMockSignal]);
 
   const getSessionToken = useCallback(() => {
     if (!config) return Promise.resolve('');
@@ -84,46 +124,72 @@ export function useMockBridge() {
         // Embedded app called something, like shopify.modal.show('modal_id')
         // Proxy the calls to their corresponding feature store
         if (event.data.type === 'FEATURE_ACTION_REQUEST') {
-          const { feature, action, payload } = event.data as FeatureActionRequest;
+          const { feature, action, payload } = event.data as HostFeatureActionMessage;
+          const actionId = event.data.action_id as string;
 
-          const featureStore = getFeatureStore(feature);
-          const state = featureStore.getState() as Record<string, unknown>;
-          const actionFn = state[action as string];
-
-          if (typeof actionFn === 'function') {
-            (actionFn as (payload: unknown) => void)(payload);
-          } else {
-            console.warn('[MockAdmin] Unknown feature action:', action);
+          if (feature === 'resourcePicker' && action === 'open') {
+            useResourcePickerFeatureStore.getState().openFromBridge({
+              actionId,
+              iframeWindow: iframeRef.current?.contentWindow ?? null,
+              options: (payload ?? {}) as ResourcePickerOpenOptions,
+            });
+            return;
           }
 
-          iframeRef.current?.contentWindow?.postMessage({
-            type: 'FEATURE_ACTION_RESPONSE',
-            action_id: event.data.action_id,
-          }, '*');
+          const respond = (body: {
+            payload: unknown;
+            error?: { code: string; message: string };
+          }) => {
+            iframeRef.current?.contentWindow?.postMessage(
+              {
+                type: 'FEATURE_ACTION_RESPONSE',
+                action_id: actionId,
+                payload: body.payload,
+                ...(body.error && { error: body.error }),
+              },
+              '*',
+            );
+          };
+
+          try {
+            const featureStore = getFeatureStore(feature as FeatureName);
+            const state = featureStore.getState() as Record<string, unknown>;
+            const actionFn = state[action as string];
+
+            if (typeof actionFn === 'function') {
+              (actionFn as (payload: unknown) => void)(payload);
+            } else {
+              console.warn('[MockAdmin] Unknown feature action:', action);
+            }
+            respond({ payload: undefined });
+          } catch (e) {
+            const message = e instanceof Error ? e.message : String(e);
+            console.warn('[MockAdmin] Feature action failed:', message);
+            respond({
+              payload: undefined,
+              error: { code: 'FEATURE_ACTION_FAILED', message },
+            });
+          }
         }
       }
     }
 
     const handleIframeLoad = () => {
-      // Send signal immediately
-      sendMockSignal();
-
-      // Send signal a few more times to ensure delivery before timeout
-      setTimeout(sendMockSignal, 10);
-      setTimeout(sendMockSignal, 50);
-      setTimeout(sendMockSignal, 100);
-    }
+      scheduleMockEnvironmentSignals();
+    };
 
     window.addEventListener('message', handleMessage);
 
-    // Send signal immediately when iframe starts loading
-    iframeRef.current?.addEventListener('load', handleIframeLoad);
+    iframe.addEventListener('load', handleIframeLoad);
+    // Iframe may have already fired `load` before this effect ran; SPAs also mount listeners late.
+    scheduleMockEnvironmentSignals();
 
     return () => {
+      clearMockSignalSchedule();
       window.removeEventListener('message', handleMessage);
       iframe.removeEventListener('load', handleIframeLoad);
     };
-  }, [config, sendMockSignal, sessionToken]);
+  }, [clearMockSignalSchedule, config, scheduleMockEnvironmentSignals, sessionToken]);
 
   const iframeSrc = (() => {
     if (!config || !sessionToken) return '';

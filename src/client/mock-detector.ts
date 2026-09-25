@@ -6,7 +6,7 @@
  */
 
 export interface MockEnvironmentConfig {
-  /** Timeout in milliseconds to wait for mock environment signal (default: 200ms) */
+  /** Timeout in milliseconds to wait for mock environment signal before loading Shopify CDN App Bridge (default: 2000ms) */
   timeout?: number;
   /** Enable debug logging (default: false) */
   debug?: boolean;
@@ -23,8 +23,9 @@ export interface MockEnvironmentConfig {
  * @returns Promise that resolves when App Bridge is loaded
  */
 export function setupAppBridge(config: MockEnvironmentConfig = {}): Promise<void> {
+  // Short default so mock detection fails fast; increase timeout if your iframe or bundles load slowly.
   const {
-    timeout = 200,
+    timeout = 2000,
     debug = false,
     onMockDetected,
     onShopifyDetected

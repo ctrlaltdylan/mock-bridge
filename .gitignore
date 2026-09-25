@@ -6,8 +6,8 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # Build outputs
-dist/
-build/
+# dist/
+# build/
 *.tsbuildinfo
 
 # Environment files

@@ -6,6 +6,7 @@ export declare class MockShopifyAdminServer {
     private server;
     private mockShop;
     private mockUser;
+    private resourcePickerCatalog;
     constructor(config: MockShopifyAdminConfig);
     private setupMiddleware;
     private setupRoutes;

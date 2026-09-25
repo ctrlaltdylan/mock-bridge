@@ -8,7 +8,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+# `dist` is committed on purpose. Consumers install this package straight from git, and yarn
+# (unlike npm) does not run a git dependency's `prepare` script — so without the build output
+# in the repo the mock admin UI is never built and the embedded iframe renders blank.
+# dist
 dist-ssr
 *.local
 

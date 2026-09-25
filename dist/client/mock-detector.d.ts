@@ -5,7 +5,7 @@
  * and automatically loads the appropriate App Bridge library.
  */
 export interface MockEnvironmentConfig {
-    /** Timeout in milliseconds to wait for mock environment signal (default: 200ms) */
+    /** Timeout in milliseconds to wait for mock environment signal before loading Shopify CDN App Bridge (default: 2000ms) */
     timeout?: number;
     /** Enable debug logging (default: false) */
     debug?: boolean;
