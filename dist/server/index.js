@@ -11,6 +11,9 @@ const path_1 = __importDefault(require("path"));
 const http_proxy_middleware_1 = require("http-proxy-middleware");
 const token_generator_1 = require("../auth/token-generator");
 const constants_1 = require("../auth/constants");
+const file_upload_1 = require("./file-upload");
+const files_query_1 = require("./files-query");
+const catalog_query_1 = require("./catalog-query");
 class MockShopifyAdminServer {
     constructor(config) {
         this.config = {
@@ -52,19 +55,25 @@ class MockShopifyAdminServer {
         }));
         this.app.use(body_parser_1.default.json());
         this.app.use(body_parser_1.default.urlencoded({ extended: true }));
+        // Must run before static, otherwise admin-frame/dist/index.html swallows "/".
+        this.app.get('/', (_req, res) => {
+            res.redirect(`/admin/apps/${this.config.clientId}`);
+        });
         // Serve static files from client directory
         this.app.use('/static', express_1.default.static(path_1.default.join(__dirname, '../client')));
         this.app.use(express_1.default.static(path_1.default.join(__dirname, '../../admin-frame/dist')));
-        // Mock Shopify Admin page with embedded app
+        // Mock Shopify Admin page with embedded app.
+        // /admin/apps/:clientId/campaigns is the same screen as the app route /campaigns.
         this.app.use('/admin/apps/:clientId', (req, res, next) => {
-            // const { host, shop } = req.query;
-            // Set CSP header to allow iframe embedding
             const frameSrc = this.config.proxy ? `'self'` : `'self' ${this.config.appUrl}`;
             res.setHeader('Content-Security-Policy', `frame-src ${frameSrc}; ` +
                 `frame-ancestors 'self' localhost:*; ` +
-                `script-src 'self' 'unsafe-inline' 'unsafe-eval';`);
-            // res.send(this.getAdminHTML(host as string, shop as string));
-            next();
+                `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com;`);
+            if (req.method !== 'GET' && req.method !== 'HEAD')
+                return next();
+            if (path_1.default.extname(req.path))
+                return next();
+            res.sendFile(path_1.default.join(__dirname, '../../admin-frame/dist/index.html'));
         });
         // this.app.use('/admin', express.static(path.join(__dirname, '../../admin-frame/dist')));
         // Debug logging
@@ -82,11 +91,6 @@ class MockShopifyAdminServer {
         });
         this.app.get('/favicon.ico', (req, res) => {
             res.sendFile(path_1.default.join(__dirname, '../../assets/img/mock-bridge-logo-200px.jpg'));
-        });
-        // Main admin route - serves the mock Shopify Admin page
-        this.app.get('/', (req, res) => {
-            const hostBase64 = Buffer.from(`https://${this.config.shop}`).toString('base64');
-            res.redirect(`/admin/apps/${this.config.clientId}?host=${hostBase64}&shop=${this.config.shop}`);
         });
         this.app.get('/api/config', (req, res) => {
             res.json({
@@ -116,6 +120,23 @@ class MockShopifyAdminServer {
                     errors: [{ message: 'Unauthorized' }]
                 });
             }
+            const query = typeof req.body?.query === 'string' ? req.body.query : '';
+            const upload = this.mockUploadGraphql(query, req.body?.variables);
+            if (upload)
+                return res.json(upload);
+            if ((0, files_query_1.isFilesListQuery)(query)) {
+                return res.json({
+                    data: { files: (0, files_query_1.mockFilesConnection)(req.body?.variables) },
+                });
+            }
+            if ((0, catalog_query_1.isProductsConnectionQuery)(query)) {
+                return res.json({ data: { products: (0, catalog_query_1.mockProductsConnection)(query) } });
+            }
+            if ((0, catalog_query_1.isCollectionsConnectionQuery)(query)) {
+                return res.json({
+                    data: { collections: (0, catalog_query_1.mockCollectionsConnection)(query) },
+                });
+            }
             // For mock purposes, return basic shop data
             res.json({
                 data: {
@@ -123,6 +144,8 @@ class MockShopifyAdminServer {
                         name: this.mockShop.name,
                         email: this.mockShop.email,
                         domain: this.mockShop.domain,
+                        currencyCode: 'USD',
+                        currencyFormats: { moneyFormat: '${{amount}}' },
                     },
                 },
             });
@@ -140,6 +163,25 @@ class MockShopifyAdminServer {
             // Handle REST API requests
             return this.handleMockRestApi(req, res, url, method);
         });
+        // Browser posts the staged file here. Shopify's real target is GCS;
+        // e2e stays on this server so the upload does not leave the mock flow.
+        const acceptStagedUpload = (req, res) => {
+            const done = () => {
+                if (!res.headersSent)
+                    res.status(201).end();
+            };
+            if (req.readableEnded) {
+                done();
+                return;
+            }
+            req.on('end', done);
+            req.on('error', done);
+            req.resume();
+        };
+        this.app.post('/mock-staged-uploads', acceptStagedUpload);
+        this.app.post('/mock-staged-uploads/*', acceptStagedUpload);
+        this.app.put('/mock-staged-uploads', acceptStagedUpload);
+        this.app.put('/mock-staged-uploads/*', acceptStagedUpload);
         // Mock OAuth token exchange endpoint
         this.app.post('/admin/oauth/access_token', (req, res) => {
             const { client_id, client_secret, subject_token } = req.body;
@@ -201,57 +243,37 @@ class MockShopifyAdminServer {
      */
     handleMockGraphQL(req, res, body) {
         const query = typeof body === 'string' ? body : body?.query || '';
+        const variables = typeof body === 'string' ? {} : body?.variables ?? {};
+        const upload = this.mockUploadGraphql(query, variables);
+        if (upload) {
+            res.json(upload);
+            return;
+        }
         // Parse the GraphQL query to determine what data to return
         const mockData = { data: {} };
+        // files connection — story_video list/search of READY videos (e2e mock only)
+        if ((0, files_query_1.isFilesListQuery)(query)) {
+            mockData.data.files = (0, files_query_1.mockFilesConnection)(variables);
+        }
+        // products / collections — getProducts / getCollections (nodes + id filter)
+        if ((0, catalog_query_1.isProductsConnectionQuery)(query)) {
+            mockData.data.products = (0, catalog_query_1.mockProductsConnection)(query);
+        }
+        if ((0, catalog_query_1.isCollectionsConnectionQuery)(query)) {
+            mockData.data.collections = (0, catalog_query_1.mockCollectionsConnection)(query);
+        }
         // Shop queries
-        if (query.includes('shop')) {
+        if (/\bshop\b/.test(query) && !(0, catalog_query_1.isProductsConnectionQuery)(query) && !(0, catalog_query_1.isCollectionsConnectionQuery)(query)) {
             mockData.data.shop = {
                 id: 'gid://shopify/Shop/1',
                 name: this.mockShop.name,
                 email: this.mockShop.email,
                 domain: this.mockShop.domain,
                 myshopifyDomain: this.config.shop,
+                currencyCode: 'USD',
+                currencyFormats: { moneyFormat: '${{amount}}' },
                 plan: { displayName: 'Developer' },
                 primaryDomain: { url: `https://${this.mockShop.domain}` },
-            };
-        }
-        // Products queries
-        if (query.includes('products')) {
-            mockData.data.products = {
-                edges: [
-                    {
-                        node: {
-                            id: 'gid://shopify/Product/1',
-                            title: 'Mock Product 1',
-                            handle: 'mock-product-1',
-                            status: 'ACTIVE',
-                            totalInventory: 100,
-                            priceRangeV2: {
-                                minVariantPrice: { amount: '19.99', currencyCode: 'USD' },
-                                maxVariantPrice: { amount: '19.99', currencyCode: 'USD' },
-                            },
-                        },
-                        cursor: 'cursor1',
-                    },
-                    {
-                        node: {
-                            id: 'gid://shopify/Product/2',
-                            title: 'Mock Product 2',
-                            handle: 'mock-product-2',
-                            status: 'ACTIVE',
-                            totalInventory: 50,
-                            priceRangeV2: {
-                                minVariantPrice: { amount: '29.99', currencyCode: 'USD' },
-                                maxVariantPrice: { amount: '29.99', currencyCode: 'USD' },
-                            },
-                        },
-                        cursor: 'cursor2',
-                    },
-                ],
-                pageInfo: {
-                    hasNextPage: false,
-                    hasPreviousPage: false,
-                },
             };
         }
         // Orders queries
@@ -310,6 +332,9 @@ class MockShopifyAdminServer {
             mockData.data = { __typename: 'QueryRoot' };
         }
         res.json(mockData);
+    }
+    mockUploadGraphql(query, variables) {
+        return (0, file_upload_1.mockFileUploadGraphql)(query, variables, `http://127.0.0.1:${this.config.port}`);
     }
     /**
      * Handle mock REST Admin API requests

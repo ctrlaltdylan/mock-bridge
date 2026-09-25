@@ -1,18 +1,26 @@
+import { useEffect } from "react"
 import { EmbeddedApp } from "./components/EmbeddedApp"
 import { Modal } from "./components/features/Modal"
 import { Loading } from "./components/features/Loading"
-import { SaveBar } from "./components/features/SaveBar"
+import { ResourcePicker } from "./components/features/ResourcePicker"
 import { Frame } from "./components/Frame"
+import { installModalMessageRelay } from "./lib/embeddedFrame"
 
 function App() {
-  return (
-    <Frame>
-      <Loading />
-      <Modal />
-      <SaveBar />
+  useEffect(() => {
+    installModalMessageRelay()
+  }, [])
 
-      <EmbeddedApp />
-    </Frame>
+  return (
+    <>
+      <Frame>
+        <Loading />
+        <EmbeddedApp />
+      </Frame>
+      {/* Outside admin-shell so large/max overlays cover nav + title bar */}
+      <Modal />
+      <ResourcePicker />
+    </>
   )
 }
 
