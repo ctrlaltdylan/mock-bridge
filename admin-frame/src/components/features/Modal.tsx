@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react";
-import { useModalFeatureStore } from "../../store/features/modal";
+import { useStore } from "zustand";
+import { stores } from "../../store/features";
 
 export function Modal() {
-  const modalStates = useModalFeatureStore(state => state.modalStates);
+  const modalStates = useStore(stores.modal, state => state.modalStates);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

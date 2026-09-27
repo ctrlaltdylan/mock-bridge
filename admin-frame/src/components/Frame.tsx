@@ -1,4 +1,5 @@
-import { useNavMenuFeatureStore, type NavItem } from "../store/features/nav-menu";
+import { useStore } from "zustand";
+import { stores, type NavItem } from "../store/features";
 
 type Props = {
   children: React.ReactNode;
@@ -17,7 +18,7 @@ const defaultNavItems: NavItem[] = [
 ];
 
 export function Frame({ children }: Props) {
-  const appNavItems = useNavMenuFeatureStore(state => state.items);
+  const appNavItems = useStore(stores.navMenu, state => state.items);
 
   // Use app nav items if provided, otherwise show default Shopify admin nav
   const hasAppNav = appNavItems.length > 0;

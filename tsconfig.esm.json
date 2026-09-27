@@ -1,0 +1,20 @@
+{
+  // Declarations for the ESM-only entry points; `scripts/build.mjs esm` bundles their JS with Vite.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "types": ["node", "@shopify/app-bridge-types"]
+  },
+  "include": ["src/core", "src/testing", "src/vite", "src/vitest"],
+  "exclude": ["**/*.test.ts"]
+}

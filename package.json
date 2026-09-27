@@ -4,20 +4,60 @@
   "description": "Mock Shopify App Bridge for testing and development",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "default": "./dist/auth/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/mock-detector.d.ts",
+      "default": "./dist/client/mock-detector.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.mjs"
+    },
+    "./vite": {
+      "types": "./dist/vite/index.d.ts",
+      "import": "./dist/vite/index.mjs"
+    },
+    "./vitest": {
+      "types": "./dist/vitest/index.d.ts",
+      "import": "./dist/vitest/index.mjs"
+    },
+    "./vitest/setup": {
+      "types": "./dist/vitest/setup.d.ts",
+      "import": "./dist/vitest/setup.mjs"
+    },
+    "./vitest/environment": {
+      "types": "./dist/vitest/environment.d.ts",
+      "import": "./dist/vitest/environment.mjs"
+    },
+    "./app-bridge.js": "./app-bridge/dist/index.js",
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
   "bin": {
     "mock-bridge": "dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc && npm run build:admin-frame && npm run build:app-bridge",
+    "build": "tsc && npm run build:esm && npm run build:admin-frame && npm run build:app-bridge",
+    "build:esm": "tsc -p tsconfig.esm.json && node scripts/build.mjs esm",
     "build:admin-frame": "cd admin-frame && npm run build",
-    "build:app-bridge": "cd app-bridge && npm run build",
+    "build:app-bridge": "node scripts/build.mjs app-bridge",
+    "test": "npm run build && vitest run",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.esm.json --emitDeclarationOnly false && tsc --noEmit -p app-bridge",
     "dev": "concurrently \"ts-node -r dotenv/config src/server/dev.ts\" \"npm run dev:app-bridge\" \"npm run dev:admin-frame\"",
-    "dev:app-bridge": "cd app-bridge && npm run watch",
+    "dev:app-bridge": "node scripts/build.mjs app-bridge --watch",
     "dev:admin-frame": "cd admin-frame && npm run dev",
     "start": "node dist/server/index.js",
     "watch": "tsc --watch",
     "clean": "rm -rf dist",
-    "prepare": "cd admin-frame && npm install --legacy-peer-deps && cd ../app-bridge && npm install && cd .. && npm run build"
+    "prepare": "cd admin-frame && npm install --legacy-peer-deps && cd .. && npm run build"
   },
   "keywords": [
     "shopify",
@@ -33,28 +73,56 @@
     "url": "https://github.com/ctrlaltdylan/mock-bridge.git"
   },
   "dependencies": {
+    "@shopify/app-bridge-types": "^0.7.2",
     "body-parser": "^1.20.2",
     "chalk": "^4.1.2",
     "commander": "^11.1.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.2",
     "http-proxy-middleware": "^3.0.3",
-    "uuid": "^14.0.0"
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^14.0.0",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
+    "@types/jsdom": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.5",
-    "@types/node": "^20.10.5",
+    "@types/node": "^22.0.0",
     "@types/uuid": "^9.0.7",
+    "@vitest/browser-playwright": "^5.0.1",
     "concurrently": "^9.2.1",
     "dotenv": "^17.2.3",
+    "jsdom": "^30.1.1",
+    "playwright": "^1.63.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.9.3",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
+  },
+  "peerDependencies": {
+    "@vitest/browser-playwright": ">=5",
+    "jsdom": ">=22",
+    "vite": ">=5",
+    "vitest": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "@vitest/browser-playwright": {
+      "optional": true
+    },
+    "jsdom": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
+    }
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.19.0"
   },
   "files": [
     "dist/",

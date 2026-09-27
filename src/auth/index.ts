@@ -29,8 +29,13 @@ export {
   type MockTokenHandlerOptions
 } from './withMockTokenSupport';
 
-// Re-export token generator types for convenience
+// Isomorphic (WebCrypto) session tokens
 export {
+  signJwt,
+  verifyJwt,
+  decodeJwt,
+  signSessionToken,
+  verifySessionToken,
   type SessionTokenPayload,
   type TokenGeneratorOptions
-} from '../auth/token-generator';
+} from './jwt';
