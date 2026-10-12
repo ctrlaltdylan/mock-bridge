@@ -3,7 +3,7 @@
  * This mimics the real @shopify/app-bridge library for testing purposes
  */
 
-import { modal } from "./features/modal";
+import { modal, polyfillModalOpener } from "./features/modal";
 import { saveBar } from "./features/save-bar";
 import { scopes } from "./features/scopes";
 import { config } from "./features/config";
@@ -21,9 +21,19 @@ import { picker } from "./features/picker";
 import { app } from "./features/app";
 import { loading } from "./features/loading";
 import { navMenu } from "./features/nav-menu";
+import { titleBar } from "./features/title-bar";
 
 (function (window) {
   'use strict';
+
+  // Cloned modal iframe: same origin as the app, but it must not boot the app.
+  // The main frame moves <ui-modal> content into this document.
+  if (new URLSearchParams(window.location.search).get('mock-modal-shell') === '1') {
+    return;
+  }
+
+  // customize-embed-* (and other src modals) need opener → main app frame.
+  polyfillModalOpener();
 
   // Store for app instances
   const appInstances = new Map();
@@ -406,8 +416,9 @@ import { navMenu } from "./features/nav-menu";
     };
   }
 
-  // Initialize nav menu observer
+  // Lift ui-nav-menu and ui-title-bar into the admin frame.
   navMenu();
+  titleBar();
 
   console.log('[MockAppBridge] Client library loaded');
 

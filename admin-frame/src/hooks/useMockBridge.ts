@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { appRouteFromAdminUrl } from "../lib/appRoute";
 import { useConfig } from "./useConfig";
+import { useAppRouteSync } from "./useAppRouteSync";
 import { getFeatureStore, type FeatureActionName, type FeatureActionPayload, type FeatureName } from "../store/features";
 
 export type FeatureActionRequest<
@@ -15,6 +17,9 @@ export type FeatureActionRequest<
 export function useMockBridge() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const config = useConfig();
+  const initialAppRoute = useRef<string | null>(null);
+
+  useAppRouteSync(config?.clientId);
 
   const [sessionToken, setSessionToken] = useState<string>('');
 
@@ -68,13 +73,17 @@ export function useMockBridge() {
     const handleMessage = (event: MessageEvent) => {
       if (!config) return;
 
+      // Main app iframe and src-modal iframes both talk to the admin;
+      // reply to the frame that asked, otherwise modal requests never resolve.
+      const replyTarget = (event.source as Window | null) ?? iframeRef.current?.contentWindow ?? null;
+
       // Handle App Bridge messages from the embedded app
       if (event.data && event.data.type) {
         // Handle session token requests
         if (event.data.type === 'SESSION_TOKEN_REQUEST') {
           // Generate and send back a session token
           getSessionToken().then(token => {
-            iframeRef.current?.contentWindow?.postMessage({
+            replyTarget?.postMessage({
               type: 'SESSION_TOKEN_RESPONSE',
               token: token,
             }, '*');
@@ -96,7 +105,7 @@ export function useMockBridge() {
             console.warn('[MockAdmin] Unknown feature action:', action);
           }
 
-          iframeRef.current?.contentWindow?.postMessage({
+          replyTarget?.postMessage({
             type: 'FEATURE_ACTION_RESPONSE',
             action_id: event.data.action_id,
           }, '*');
@@ -128,13 +137,25 @@ export function useMockBridge() {
   const iframeSrc = (() => {
     if (!config || !sessionToken) return '';
 
+    if (initialAppRoute.current === null) {
+      initialAppRoute.current = appRouteFromAdminUrl(config.clientId);
+    }
+
     const basePath = config.appPath || '';
     const host = btoa(config.shop);
-    const idToken = sessionToken;
+    const appRoute = new URL(initialAppRoute.current || '/', 'http://mock.local');
+    const params = new URLSearchParams(appRoute.search);
+    params.set('host', host);
+    params.set('shop', config.shop);
+    params.set('embedded', '1');
+    params.set('id_token', sessionToken);
 
     const origin = config.proxy ? '/__proxy' : config.appUrl;
+    const routePath = appRoute.pathname === '/' ? '' : appRoute.pathname;
+    const alreadyPrefixed = basePath !== '' && (routePath === basePath || routePath.startsWith(`${basePath}/`));
+    const pathname = alreadyPrefixed ? routePath : `${basePath}${routePath}`;
 
-    return `${origin}${basePath}?host=${host}&shop=${config.shop}&embedded=1&id_token=${idToken}`;
+    return `${origin}${pathname}?${params.toString()}`;
   })();
 
   return {
