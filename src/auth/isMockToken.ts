@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { STANDARD_MOCK_SECRET } from './constants';
+import { STANDARD_MOCK_SECRET } from './constants.js';
 
 /**
  * Check if a session token is a mock token by attempting to verify it with the mock secret

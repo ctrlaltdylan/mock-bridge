@@ -1,18 +1,14 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ES2020",
-    "lib": ["ES2020", "DOM"],
-    "outDir": "./dist",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noEmit": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "types": ["@shopify/app-bridge-types"]
   },
   "include": ["src/**/*"],

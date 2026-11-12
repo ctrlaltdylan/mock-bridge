@@ -1,28 +1,9 @@
 import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 
-export interface SessionTokenPayload {
-  iss: string;  // Shop's admin domain
-  dest: string; // Shop's domain  
-  aud: string;  // Client ID
-  sub: string;  // User ID
-  exp: number;  // Expiration time
-  nbf: number;  // Not before time
-  iat: number;  // Issued at time
-  jti: string;  // JWT ID
-  sid: string;  // Session ID
-  sig: string;  // Shopify signature
-}
+import type { SessionTokenPayload, TokenGeneratorOptions } from './jwt.js';
 
-export interface TokenGeneratorOptions {
-  shop: string;
-  clientId: string;
-  clientSecret: string;
-  userId?: string;
-  sessionId?: string;
-  expiresInSeconds?: number;
-}
+export type { SessionTokenPayload, TokenGeneratorOptions };
 
 export class TokenGenerator {
   private clientSecret: string;
@@ -53,7 +34,7 @@ export class TokenGenerator {
       exp: now + expiresInSeconds,
       nbf: now,
       iat: now,
-      jti: uuidv4(),
+      jti: crypto.randomUUID(),
       sid: sessionId,
       sig: crypto.randomBytes(32).toString('hex'),
     };
@@ -118,7 +99,7 @@ export class TokenGenerator {
       exp: now + expiresInSeconds,
       nbf: now,
       iat: now,
-      jti: uuidv4(), // New JWT ID for the refreshed token
+      jti: crypto.randomUUID(), // New JWT ID for the refreshed token
     };
 
     return jwt.sign(refreshedPayload, this.clientSecret, {

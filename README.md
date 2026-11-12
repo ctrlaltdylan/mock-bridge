@@ -52,13 +52,13 @@
 | `shopify.modal` | ✅ Supported | `show()`, `hide()`, `toggle()` |
 | `shopify.saveBar` | ✅ Supported | `show()`, `hide()`, `toggle()` |
 | `shopify.loading` | ✅ Supported | `loading(boolean)` |
-| `shopify.toast` | ✅ Supported | `show(message, options)` |
+| `shopify.toast` | ✅ Supported | `show(message, options)`, `hide(id)`; rendered in the admin |
 | `shopify.idToken` | ✅ Supported | Returns valid JWT |
 | `shopify.config` | ✅ Supported | `apiKey`, `shop`, `locale` |
 | `shopify.environment` | ✅ Supported | `embedded`, `mobile`, `pos` |
 | `shopify.user` | ✅ Supported | Returns mock user object |
 | `shopify.scopes` | 🔶 Stub | Returns mock data |
-| `shopify.resourcePicker` | 🔶 Stub | Returns empty array |
+| `shopify.resourcePicker` | 🔶 Stub | Returns empty array; configurable in [unit tests](#-unit-testing-with-vitest) |
 | `shopify.picker` | 🔶 Stub | Returns empty selection |
 | `shopify.scanner` | 🔶 Stub | Returns mock scan data |
 | `shopify.pos` | 🔶 Stub | Cart API with mock data |
@@ -67,10 +67,10 @@
 | `shopify.support` | 🔶 Stub | Callback registration only |
 | `shopify.reviews` | 🔶 Stub | Returns success |
 | `shopify.app` | 🔶 Stub | Returns empty extensions |
-| Authenticated fetch | ✅ Supported | Mock, proxy, or direct modes |
-| Navigation | ❌ Not implemented | |
-| Print | ❌ Not implemented | |
-| Share | ❌ Not implemented | |
+| Authenticated fetch | ✅ Supported | `shopify:admin/...` direct API access and `/admin/api/...`; mock, proxy, or direct modes. Same-origin requests get `Authorization: Bearer <id token>` |
+| Navigation | ✅ Supported | `shopify://admin/...` links and `window.open()` show admin pages; the admin's URL follows the app's history, so reloads and deep links (`/admin/apps/<client id>/<path>`) return to the same page; the admin nav menu follows the app's links (`<s-link>`s dispatch `shopify:navigate`) |
+| Print | ✅ Supported | `window.print()` is reported to the admin and prints the app |
+| Share | ✅ Supported | `navigator.share()` opens a share sheet in the admin; dismissing it rejects with `AbortError` |
 
 ### Web Components
 | Component | Status | Notes |
@@ -78,8 +78,10 @@
 | `<ui-modal>` | ✅ Supported | With `<ui-title-bar>` support |
 | `<ui-save-bar>` | ✅ Supported | With `data-save-bar` form integration |
 | `<ui-nav-menu>` | ✅ Supported | Displays in admin sidebar |
-| `<ui-title-bar>` | ✅ Supported | Inside modals |
-| `<s-app-window>` | ❌ Not implemented | |
+| `<ui-title-bar>` | ✅ Supported | In modals, and as the page's title bar: `title`, breadcrumb, primary and secondary actions, and `<section label>` groups show in the admin; clicking one clicks the app's button |
+| `<s-page>` | ✅ Supported | `heading` and the `breadcrumb-actions`, `primary-action` and `secondary-actions` slots show in the admin's title bar (a secondary action with `commandfor` an `<s-menu>` is a group); clicking one clicks the app's button, and `<s-link>`s dispatch `shopify:navigate` |
+| `<s-app-window>` | ✅ Supported | `show()`, `hide()`, `toggle()`, `src`, `contentWindow`, `show`/`hide` events; full-screen in the admin |
+| Invoker commands | ✅ Supported | `<button commandfor="id" command="--show">` (and `--hide`, `--toggle`) for `<ui-modal>` and `<s-app-window>` |
 
 **Legend:** ✅ Supported | 🔶 Stub (returns mock data) | ❌ Not implemented
 
@@ -125,8 +127,8 @@ npx @getverdict/mock-bridge http://localhost:3000
 # Generate a config file
 npx @getverdict/mock-bridge init
 
-# Edit the generated mock.config.js, then run:
-npx @getverdict/mock-bridge
+# Edit the generated mock.config.mjs, then run:
+npx @getverdict/mock-bridge --config mock.config.mjs
 ```
 
 ```bash
@@ -146,7 +148,7 @@ If you need more control, you can still use the programmatic API:
 
 ```javascript
 // scripts/start-mock-admin.js
-const { MockShopifyAdminServer } = require("@verdict/mock-bridge");
+import { MockShopifyAdminServer } from "@getverdict/mock-bridge";
 
 async function startMockAdmin() {
   const server = new MockShopifyAdminServer({
@@ -449,7 +451,7 @@ npx @getverdict/mock-bridge http://localhost:3000/shopify \
 
 # Using config file
 npx @getverdict/mock-bridge init           # Create config file
-npx @getverdict/mock-bridge                # Use config file
+npx @getverdict/mock-bridge --config mock.config.mjs  # Use config file
 
 # Help and version
 npx @getverdict/mock-bridge --help
@@ -465,7 +467,7 @@ npx @getverdict/mock-bridge --version
 | `--client-secret` | Mock client secret                   | `"mock-secret-12345"`           |
 | `--shop`          | Mock shop domain                     | `"test-shop.myshopify.com"`     |
 | `--port`          | Mock admin port                      | `3080`                          |
-| `--config`        | Config file path                     | `"mock.config.js"`              |
+| `--config`        | Config file path, e.g. `mock.config.mjs` | —                           |
 | `--debug`         | Enable debug logging                 | `false`                         |
 
 ### Environment Variables
@@ -482,8 +484,8 @@ NODE_ENV=development                # Enables mock token support
 Generate a configuration file with `npx @getverdict/mock-bridge init`:
 
 ```javascript
-// mock.config.js
-module.exports = {
+// mock.config.mjs
+export default {
   appUrl: "http://localhost:3000/shopify", // Include path in URL
   clientId: process.env.SHOPIFY_API_KEY,
   clientSecret: "mock-secret-12345",
@@ -575,22 +577,22 @@ const server = new MockShopifyAdminServer({
 Control how `fetch('/admin/api/...')` requests are handled:
 
 ```javascript
-// mock.config.js
+// mock.config.mjs (pick one)
 
 // Option 1: Mock data (default) - returns fake data, works offline
-module.exports = {
+export default {
   adminApi: "mock",
 };
 
 // Option 2: Proxy through your app - for real data via your backend
-module.exports = {
+export default {
   adminApi: {
     proxy: "http://localhost:3000/api/shopify-proxy",
   },
 };
 
 // Option 3: Direct to Shopify - requires access token from installed shop
-module.exports = {
+export default {
   adminApi: {
     accessToken: process.env.SHOPIFY_ACCESS_TOKEN,
   },
@@ -777,6 +779,128 @@ describe("API with Mock Tokens", () => {
 });
 ```
 
+## 🧪 Unit Testing with Vitest
+
+For component tests there's no need for the mock server or an iframe. `@getverdict/mock-bridge/vite` installs `window.shopify` in each Vitest test file, backed by an in-process host:
+
+- **Admin API:** `fetch('shopify:admin/...')` and `/admin/api/...` requests are answered by handlers you register. Nothing goes over the network.
+- **Admin UI:** toasts, save bars, loading, modals and the nav menu are recorded so tests can assert on them.
+- **Id tokens:** `shopify.idToken()` returns real HS256 tokens signed with WebCrypto.
+
+### Browser Mode (recommended)
+
+`browser: true` runs tests in a real Chromium with [Vitest Browser Mode](https://vitest.dev/guide/browser/). The test page loads Polaris from Shopify's CDN, as the admin does, so `s-page`, `s-button` and the other `s-*` components render and behave for real.
+
+```bash
+npm install -D @getverdict/mock-bridge vitest @vitest/browser-playwright playwright
+npx playwright install chromium
+```
+
+```ts
+// vitest.config.ts
+import { mockBridge } from "@getverdict/mock-bridge/vite";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  plugins: [mockBridge({ shop: "my-shop.myshopify.com", browser: true })],
+});
+```
+
+`browser` also accepts `{ headless, instances, polaris }`. `instances` defaults to `[{ browser: "chromium" }]`. `polaris: false` skips loading Polaris, for offline runs. Any `test.browser` settings in your config take precedence.
+
+### jsdom
+
+Without `browser`, tests run in jsdom. It's faster to start and needs no browser, but `s-*` elements are inert: event handlers still fire, but nothing renders. The plugin sets `environment: 'jsdom'` unless you've set an environment yourself.
+
+```bash
+npm install -D @getverdict/mock-bridge vitest jsdom
+```
+
+```ts
+export default defineConfig({
+  plugins: [mockBridge({ shop: "my-shop.myshopify.com" })],
+});
+```
+
+### Writing tests
+
+The same tests run in either mode.
+
+```tsx
+// app.test.tsx
+import { bridge } from "@getverdict/mock-bridge/vitest";
+import { render, screen, waitFor } from "@testing-library/preact";
+import App from "./app";
+
+test("lists fees", async () => {
+  bridge.graphql("FeeRules", ({ variables }) => ({ data: { metaobjects: { nodes: [/* ... */] } } }));
+
+  render(<App />);
+
+  expect(await screen.findByText("Mississippi")).toBeTruthy();
+});
+
+test("toasts errors", async () => {
+  bridge.graphql("FeeRules", () => ({ errors: [{ message: "Access denied" }] }));
+  render(<App />);
+  await waitFor(() => expect(bridge.toasts()).toContainEqual(expect.objectContaining({ message: "Access denied", isError: true })));
+});
+```
+
+In tests, `window.print()` and `window.open()` are recorded but never reach jsdom or the browser.
+
+Each test file gets a fresh bridge. Handlers registered at the top level or in `beforeAll` last for the whole file; handlers and recorded state from a test are reset after it (the same model as msw).
+
+### `bridge` API
+
+| Member | Description |
+|--------|-------------|
+| `graphql(operationName, handler)` | Answers a GraphQL operation by name (`'*'` answers any unhandled one). `handler(request)` receives `{ url, method, headers, body, operationName, query, variables }` and returns a JSON body or a `Response`. Unhandled operations reject with a hint. |
+| `rest(method, path, handler)` | Answers REST Admin requests; `path` is matched after `/admin/api/<version>/`, e.g. `'products.json'` or a RegExp. |
+| `resourcePicker(selection)` | What `shopify.resourcePicker()` resolves to; `undefined` simulates cancelling. Default `[]`. |
+| `shareResult(outcome)` | How the merchant answers `navigator.share()`: `'shared'` (default) or `'cancelled'`, which rejects with an `AbortError`. |
+| `toasts()` | Toasts shown so far: `{ id, message, isError, duration, action }`. |
+| `saveBar(id)` / `modal(id)` / `appWindow(id)` / `navMenu()` / `loading()` | Admin-side state. |
+| `navigation()` | `{ url, adminPath, entries }`: the app's URL, the admin page it sent the merchant to (`shopify://admin/products` is `'/products'`), and every navigation, including `window.open()` calls. |
+| `navigate(href)` | Picks an admin nav menu item; the app follows its own link as if clicked. |
+| `titleBar()` | The page's `<ui-title-bar>` or `<s-page>` as the admin shows it: `{ title, breadcrumb, primaryAction, secondaryActions }`, or `null`. |
+| `clickTitleBarAction(idOrLabel)` | Clicks a title bar action in the admin, by id (the element's `id`, else e.g. `'primary'`) or label; the app's button gets the click. |
+| `shares()` / `prints()` | `navigator.share()` calls, and how many times the app called `window.print()`. |
+| `adminRequests` / `calls` | Every Admin API request and every App Bridge call the app made, in order. What the bridge mirrors from the page (URL, title bar, nav menu, elements) is in `stores`. |
+| `idToken()` | A fresh session token. |
+| `stores` | The admin state the admin-frame renders from, per feature: `state` (a `@preact/signals-core` signal), `subscribe((state, previous) => …)`, `actions`, `set(change)` and `reset()`. Prefer `subscribe` or `state.subscribe()`: your own `effect()` only tracks `state` if it comes from the same copy of `@preact/signals-core`. |
+
+Plugin options: `shop`, `apiKey`, `clientSecret` (pass your app's secret to have your backend accept the tokens), `userId`, `locale`, `embedded`, `browser` (see above), and `environment` (see below).
+
+### Pages that load App Bridge from the CDN
+
+`mockBridge({ environment: 'mock-bridge' })` uses a jsdom environment for tests that load a page's HTML (`environmentOptions.jsdom.html`). It installs `window.shopify` before the page parses and serves stubs for `https://cdn.shopify.com/shopifycloud/app-bridge.js` and `polaris.js`, so classic page scripts see the mock just as they would the real App Bridge. Tests start after the page's `load` event. Pass `scripts: { [url]: body | null }` to stub other scripts, or `null` to load the real one. jsdom doesn't run `type="module"` scripts.
+
+### Without Vitest
+
+`createTestBridge(options)` from `@getverdict/mock-bridge/testing` is the same host with no test-runner coupling: `const bridge = createTestBridge(); const uninstall = bridge.install(window);`.
+
+## ⚡ Vite dev server
+
+The same plugin can run your app inside the mock admin during `vite dev`, without starting a separate `mock-bridge` process:
+
+```ts
+// vite.config.ts
+import { mockBridge } from "@getverdict/mock-bridge/vite";
+
+export default defineConfig({
+  plugins: [mockBridge({ shop: "my-shop.myshopify.com", dev: true })],
+});
+```
+
+`vite dev` then also starts the mock admin at http://localhost:3080, listed under Vite's own URLs, with your app embedded from Vite's URL. It serves `index.html` with the mock App Bridge in place of `https://cdn.shopify.com/shopifycloud/app-bridge.js`, so no detection snippet is needed. The mock admin stops when Vite does.
+
+Leave `dev` unset to decide per run: `MOCK_BRIDGE=1 vite dev` enables it and a plain `vite dev` doesn't, which leaves `shopify app dev` against the real admin unaffected.
+
+`dev` options: `port` (default 3080), `appPath` (the path the admin loads, e.g. `'/app'`), `appUrl` (when the app isn't served at Vite's local URL), `adminApi` (`'mock'`, `{ proxy }` or `{ accessToken }`, as for the server), `url` (use a mock-bridge server that's already running instead of starting one), and `debug`. `shop`, `apiKey`, `clientSecret` and `userId` are shared with the test options. Pass your app's `apiKey` and `clientSecret` to have your backend accept the mock id tokens.
+
+**It never reaches production:** the plugin only applies to the dev server (`apply: 'serve'`), so `vite build` output is untouched, and it refuses to start the mock admin when Vite runs in production mode.
+
 ## 🛡️ Security Considerations
 
 ### Development Only
@@ -911,6 +1035,10 @@ Generate mock user objects for testing.
 #### `withMockTokenSupport(authFunction, shopifySecret, options?)`
 
 Wrapper to add mock support to existing auth functions.
+
+#### `signSessionToken(options)` / `verifySessionToken(token, secret)`
+
+Async, WebCrypto-based counterparts of `TokenGenerator` that run in Node, browsers and jsdom. Tokens are interchangeable with `TokenGenerator`'s and `jsonwebtoken`'s. `signJwt`, `verifyJwt` and `decodeJwt` are the lower-level helpers.
 
 ### Server Classes
 

@@ -3,9 +3,9 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import path from 'path';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { TokenGenerator } from '../auth/token-generator';
-import { MockShopifyAdminConfig, MockShop, MockUser } from '../types';
-import { STANDARD_MOCK_CLIENT_ID, STANDARD_MOCK_SECRET } from '../auth/constants';
+import { TokenGenerator } from '../auth/token-generator.js';
+import { MockShopifyAdminConfig, MockShop, MockUser } from '../types/index.js';
+import { STANDARD_MOCK_CLIENT_ID, STANDARD_MOCK_SECRET } from '../auth/constants.js';
 
 export class MockShopifyAdminServer {
   private app: Express;
@@ -25,7 +25,8 @@ export class MockShopifyAdminServer {
       scopes: ['read_products', 'write_products', 'read_orders', 'write_orders'],
       debug: false,
       adminApi: 'mock',
-      ...config,
+      // Options passed as undefined keep their defaults.
+      ...Object.fromEntries(Object.entries(config).filter(([, value]) => value !== undefined)) as MockShopifyAdminConfig,
     };
 
     this.app = express();
@@ -63,26 +64,26 @@ export class MockShopifyAdminServer {
     this.app.use(bodyParser.urlencoded({ extended: true }));
 
     // Serve static files from client directory
-    this.app.use('/static', express.static(path.join(__dirname, '../client')));
-    this.app.use(express.static(path.join(__dirname, '../../admin-frame/dist')));
+    this.app.use('/static', express.static(path.join(import.meta.dirname, '../client')));
+    this.app.use(express.static(path.join(import.meta.dirname, '../../admin-frame/dist')));
 
     // Mock Shopify Admin page with embedded app
     this.app.use('/admin/apps/:clientId', (req: Request, res: Response, next) => {
       // const { host, shop } = req.query;
 
       // Set CSP header to allow iframe embedding
-      const frameSrc = this.config.proxy ? `'self'` : `'self' ${this.config.appUrl}`;
+      const frameSrc = this.config.proxy ? `'self'` : `'self' ${new URL(this.config.appUrl).origin}`;
       res.setHeader('Content-Security-Policy',
         `frame-src ${frameSrc}; ` +
         `frame-ancestors 'self' localhost:*; ` +
-        `script-src 'self' 'unsafe-inline' 'unsafe-eval';`
+        `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com;`
       );
 
       // res.send(this.getAdminHTML(host as string, shop as string));
       next();
     });
 
-    // this.app.use('/admin', express.static(path.join(__dirname, '../../admin-frame/dist')));
+    // this.app.use('/admin', express.static(path.join(import.meta.dirname, '../../admin-frame/dist')));
 
     // Debug logging
     if (this.config.debug) {
@@ -96,11 +97,11 @@ export class MockShopifyAdminServer {
   private setupRoutes(): void {
     // Serve logo images
     this.app.get('/logo', (req: Request, res: Response) => {
-      res.sendFile(path.join(__dirname, '../../assets/img/mock-bridge-logo-200px.jpg'));
+      res.sendFile(path.join(import.meta.dirname, '../../assets/img/mock-bridge-logo-200px.jpg'));
     });
 
     this.app.get('/favicon.ico', (req: Request, res: Response) => {
-      res.sendFile(path.join(__dirname, '../../assets/img/mock-bridge-logo-200px.jpg'));
+      res.sendFile(path.join(import.meta.dirname, '../../assets/img/mock-bridge-logo-200px.jpg'));
     });
 
     // Main admin route - serves the mock Shopify Admin page
@@ -156,7 +157,11 @@ export class MockShopifyAdminServer {
 
     // Mock Admin API proxy endpoint - handles intercepted fetch calls from App Bridge
     this.app.post('/mock-admin-api', (req: Request, res: Response) => {
-      const { url, method, body } = req.body;
+      // body-parser 2 leaves `req.body` undefined when no parser matched the request.
+      const { url, method, body } = req.body ?? {};
+      if (typeof url !== 'string') {
+        return res.status(400).json({ errors: [{ message: 'Expected a JSON body with a url' }] });
+      }
 
       if (this.config.debug) {
         console.log(`[MockShopify] Admin API proxy: ${method} ${url}`);
@@ -173,7 +178,7 @@ export class MockShopifyAdminServer {
 
     // Mock OAuth token exchange endpoint
     this.app.post('/admin/oauth/access_token', (req: Request, res: Response) => {
-      const { client_id, client_secret, subject_token } = req.body;
+      const { client_id, client_secret, subject_token } = req.body ?? {};
 
       if (client_id !== this.config.clientId! || client_secret !== this.config.clientSecret!) {
         return res.status(401).json({ error: 'invalid_client' });
@@ -204,7 +209,7 @@ export class MockShopifyAdminServer {
     // Mock app bridge script (served for embedded apps)
     this.app.get('/app-bridge.js', (req: Request, res: Response) => {
       res.type('application/javascript');
-      const srcPath = path.join(__dirname, '../../app-bridge/dist/index.js');
+      const srcPath = path.join(import.meta.dirname, '../../app-bridge/dist/index.js');
       res.sendFile(srcPath);
     });
 
@@ -225,8 +230,14 @@ export class MockShopifyAdminServer {
       }));
     }
 
+    // The admin's pages and deep links into the app (/admin/apps/<client id>/<app path>) route client-side.
+    this.app.get(/^\/admin(?:\/(?!api\/|oauth\/).*)?$/, (req: Request, res: Response) => {
+      res.sendFile(path.join(import.meta.dirname, '../../admin-frame/dist/index.html'));
+    });
+
     // Catch-all for undefined routes
-    this.app.use('*', (req: Request, res: Response) => {
+    // Express 5 has no '*' path; a pathless middleware catches everything left.
+    this.app.use((req: Request, res: Response) => {
       if (this.config.debug) {
         console.log(`[MockShopify] Unhandled route: ${req.method} ${req.originalUrl}`);
       }
@@ -438,9 +449,11 @@ export class MockShopifyAdminServer {
   }
 
   public async start(): Promise<void> {
-    return new Promise((resolve) => {
-      this.server = this.app.listen(this.config.port, () => {
-        console.log(`
+    return new Promise((resolve, reject) => {
+      // Express 5 calls this with the error if listening fails (e.g. EADDRINUSE).
+      this.server = this.app.listen(this.config.port, (error?: Error) => {
+        if (error) return reject(error);
+        if (!this.config.quiet) console.log(`
 🚀 Mock Shopify Admin Server Started!
 ====================================
 📍 URL: http://localhost:${this.config.port}

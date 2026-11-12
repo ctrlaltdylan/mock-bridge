@@ -1,9 +1,32 @@
+/* The admin's typography, as Polaris sets it. Polaris web components style themselves. */
+html,
+body,
+button {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 body {
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
   height: 100vh;
   width: 100vw;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  font-weight: 450;
+  color: rgb(48, 48, 48);
+  background-color: rgb(241, 242, 244);
+}
+
+h1, h2, h3, h4, h5, h6, p {
+  margin: 0;
+  font-size: 1em;
+  font-weight: 450;
 }
 
 div#root {
@@ -11,6 +34,6 @@ div#root {
   width: 100%;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
 }

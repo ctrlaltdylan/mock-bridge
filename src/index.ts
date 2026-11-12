@@ -1,11 +1,11 @@
-export { MockShopifyAdminServer } from './server';
-export { TokenGenerator } from './auth/token-generator';
-export { setupAppBridge, isMockEnvironment, getMockServerUrl } from './client/mock-detector';
-export * from './types';
-export type { MockEnvironmentConfig } from './client/mock-detector';
+export { MockShopifyAdminServer } from './server/index.js';
+export { TokenGenerator } from './auth/token-generator.js';
+export { setupAppBridge, isMockEnvironment, getMockServerUrl } from './client/mock-detector.js';
+export * from './types/index.js';
+export type { MockEnvironmentConfig } from './client/mock-detector.js';
 
 // Authentication utilities for backend integration
-export * from './auth';
+export * from './auth/index.js';
 
 // Convenience function to quickly start a mock server
 export async function startMockShopifyAdmin(config: {
@@ -16,7 +16,7 @@ export async function startMockShopifyAdmin(config: {
   shop?: string;
   debug?: boolean;
 }) {
-  const { MockShopifyAdminServer } = await import('./server');
+  const { MockShopifyAdminServer } = await import('./server/index.js');
 
   const server = new MockShopifyAdminServer(config);
   await server.start();

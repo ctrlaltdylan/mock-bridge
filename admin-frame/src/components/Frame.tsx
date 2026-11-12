@@ -1,7 +1,17 @@
-import { useNavMenuFeatureStore, type NavItem } from "../store/features/nav-menu";
+import type { ComponentChildren } from "preact";
+import type { Config } from "../hooks/useConfig";
+import { parseUrl } from "../../../src/core/url";
+import { appPath } from "../lib/app";
+import { adminPath, appNavItems, appUrl, stores, type NavItem } from "../store/features";
+import { TitleBar } from "./features/TitleBar";
 
 type Props = {
-  children: React.ReactNode;
+  children: ComponentChildren;
+  config: Config | null;
+  /** Follows an item of the app's nav menu. */
+  onNavigateApp: (href: string) => void;
+  /** Goes back to the app, where it last was. */
+  onOpenApp: () => void;
 }
 
 // Default Shopify admin navigation items
@@ -16,11 +26,26 @@ const defaultNavItems: NavItem[] = [
   { label: 'Discounts', href: '/discounts' },
 ];
 
-export function Frame({ children }: Props) {
-  const appNavItems = useNavMenuFeatureStore(state => state.items);
+/** The pathname `href` points to, or `null` if it isn't a URL. */
+const pathOf = (href: string, base: string) => parseUrl(href, base)?.pathname ?? null;
 
-  // Use app nav items if provided, otherwise show default Shopify admin nav
-  const hasAppNav = appNavItems.length > 0;
+/**
+ * The app path (without query or hash) an app nav item's `href` points to, from the app's
+ * `url`, as the admin's nav menu routes it: through the proxy, `/fees` is the app's `/fees`.
+ */
+function appPathOf(config: Config, href: string, url: string) {
+  const resolved = parseUrl(href, url);
+  return resolved ? pathOf(appPath(config, resolved.href) ?? href, 'http://app') : null;
+}
+
+function isCurrentApp(config: Config | null, href: string, url: string | null) {
+  if (!config || !url) return false;
+  const path = appPathOf(config, href, url);
+  return path !== null && path === appPathOf(config, url, url);
+}
+
+export function Frame({ children, config, onNavigateApp, onOpenApp }: Props) {
+  const hasAppNav = appNavItems.value.length > 0;
 
   return (
     <div
@@ -57,37 +82,35 @@ export function Frame({ children }: Props) {
             {defaultNavItems.map((item, index) => (
               <s-button
                 key={`default-${index}`}
-                variant="tertiary"
+                variant={adminPath.value !== null && pathOf(adminPath.value, location.origin) === item.href ? 'secondary' : 'tertiary'}
+                onClick={() => stores.navigation.set({ adminPath: item.href })}
               >
                 {item.label}
               </s-button>
             ))}
           </s-stack>
 
-          {/* App-specific navigation section */}
-          {hasAppNav && (
+          {/* The app: its nav menu's items, or one item to get back to it */}
+          {config && (
             <>
               <div style={{ borderTop: '1px solid #ccc', margin: '12px 8px' }} />
               <div style={{ padding: '4px 12px', fontSize: '11px', color: '#666', fontWeight: 600, textTransform: 'uppercase' }}>
                 App
               </div>
               <s-stack justifyContent="stretch">
-                {appNavItems.map((item, index) => (
+                {hasAppNav ? appNavItems.value.map((item, index) => (
                   <s-button
                     key={`app-${index}`}
-                    variant="tertiary"
-                    onClick={() => {
-                      // Send navigation message to iframe
-                      const iframe = document.getElementById('app-iframe') as HTMLIFrameElement;
-                      iframe?.contentWindow?.postMessage({
-                        type: 'NAV_MENU_CLICK',
-                        href: item.href,
-                      }, '*');
-                    }}
+                    variant={adminPath.value === null && isCurrentApp(config, item.href, appUrl.value) ? 'secondary' : 'tertiary'}
+                    onClick={() => onNavigateApp(item.href)}
                   >
                     {item.label}
                   </s-button>
-                ))}
+                )) : (
+                  <s-button variant={adminPath.value === null ? 'secondary' : 'tertiary'} onClick={onOpenApp}>
+                    Open app
+                  </s-button>
+                )}
               </s-stack>
             </>
           )}
@@ -111,7 +134,7 @@ export function Frame({ children }: Props) {
               borderBottom: '1px solid rgb(235, 235, 235)',
             }}
           >
-
+            <TitleBar />
           </div>
 
           {children}

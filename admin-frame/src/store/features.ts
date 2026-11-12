@@ -1,27 +1,47 @@
-import { useModalFeatureStore } from "./features/modal";
-import { useLoadingFeatureStore } from "./features/loading";
-import { useSaveBarFeatureStore } from "./features/save-bar";
-import { useNavMenuFeatureStore } from "./features/nav-menu";
+import { computed } from "@preact/signals";
+import type { FeatureEventMessage } from "../../../src/core/protocol";
+import { createFeatureStores } from "../../../src/core/stores";
 
-export const features = {
-  modal: useModalFeatureStore,
-  loading: useLoadingFeatureStore,
-  saveBar: useSaveBarFeatureStore,
-  navMenu: useNavMenuFeatureStore,
+export type { AppWindowState, ModalContent, ModalState, NavItem, SaveBarState, ShareRequest, TitleBarAction, TitleBarGroup, TitleBarState, Toast } from "../../../src/core/stores";
+
+/** The embedded app's window. */
+export function appFrame(): Window | null {
+  return (document.getElementById('app-iframe') as HTMLIFrameElement | null)?.contentWindow ?? null;
 }
 
-export type FeatureName = keyof typeof features;
-export type FeatureStore<F extends FeatureName> = ReturnType<typeof features[F]['getState']>;
-export type FeatureActions<F extends FeatureName> = {
-  [K in keyof FeatureStore<F> as FeatureStore<F>[K] extends (...args: any[]) => any ? K : never]: FeatureStore<F>[K];
-};
-export type FeatureActionName<F extends FeatureName> = keyof FeatureActions<F>;
-export type FeatureActionPayload<F extends FeatureName, A extends FeatureActionName<F>> = FeatureActions<F>[A] extends (payload: infer P) => any ? P : never;
+/** The admin's state for each App Bridge feature, shared with the in-process test host. */
+export const stores = createFeatureStores({
+  emit: (feature, event, payload) => {
+    const message: FeatureEventMessage = { type: 'FEATURE_EVENT', feature, event, payload };
+    appFrame()?.postMessage(message, '*');
+  },
+  // The admin runs for a whole dev session; it only needs the latest entries.
+  maxNavigationEntries: 100,
+});
 
-export function getFeatureStore<F extends FeatureName>(name: F) {
-  if (!features[name]) {
-    throw new Error(`Feature ${name} not found/supported`);
+/** The frame each save bar came from, which its Save and Discard buttons answer. */
+export const saveBarFrames = new Map<string, Window>();
+
+/**
+ * The app's page is gone (an admin page shows, the app reloads or loads a new page): what it
+ * showed over the admin goes with it, and the next page reports its own. The nav menu stays, to
+ * get back. Nothing is sent to the app: the page that would hear it is gone.
+ */
+export function clearAppState() {
+  for (const store of [stores.modal, stores.saveBar, stores.appWindow, stores.titleBar, stores.loading, stores.share]) {
+    store.reset({ notify: false });
   }
-
-  return features[name];
+  saveBarFrames.clear();
 }
+
+// What the admin renders. A component reading one re-renders only when its value changes.
+export const adminPath = computed(() => stores.navigation.state.value.adminPath);
+export const appUrl = computed(() => stores.navigation.state.value.url);
+export const appNavItems = computed(() => stores.navMenu.state.value.items);
+export const appWindows = computed(() => stores.appWindow.state.value.appWindows);
+export const isLoading = computed(() => stores.loading.state.value.isLoading);
+export const modalStates = computed(() => stores.modal.state.value.modalStates);
+export const saveBars = computed(() => stores.saveBar.state.value.saveBars);
+export const shareRequest = computed(() => stores.share.state.value.current);
+export const titleBar = computed(() => stores.titleBar.state.value.titleBar);
+export const toasts = computed(() => stores.toast.state.value.toasts);

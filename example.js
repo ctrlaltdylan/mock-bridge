@@ -7,7 +7,7 @@
  * 3. Open http://localhost:3080 in your browser
  */
 
-const { MockShopifyAdminServer } = require('./dist');
+import { MockShopifyAdminServer } from './dist/index.js';
 
 async function runExample() {
   console.log('Starting Mock Shopify Admin Server...\n');
